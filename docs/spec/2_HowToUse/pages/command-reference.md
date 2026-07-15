@@ -6,20 +6,21 @@ status: implemented
 
 # Commands
 
-Command一覧と共通CLI規則を記載する。構文、動作、出力はリンク先を正本とする。
+This page lists commands and shared CLI rules. Each linked page is the source
+of truth for its command syntax, behavior, and output.
 
-| Command | Purpose | Detail |
+| Command | Purpose | Details |
 | --- | --- | --- |
-| install | skillをprojectへ登録 | [[docs/spec/2_HowToUse/pages/install-skill\|SkillのInstall]] |
-| publish | 未管理skillをsourceへ初回公開 | [[docs/spec/2_HowToUse/pages/publish\|Publish]] |
-| status | 同期状態を確認 | [[docs/spec/2_HowToUse/pages/status\|Status]] |
-| pull | sourceの変更を取得 | [[docs/spec/2_HowToUse/pages/pull\|Pull]] |
-| push | localの変更を送信 | [[docs/spec/2_HowToUse/pages/push\|Push]] |
-| uninstall | projectからskillと管理情報を削除 | [[docs/spec/2_HowToUse/pages/uninstall\|Uninstall]] |
+| install | Register a skill in the project | [Install a skill](install-skill.md) |
+| publish | Publish an unmanaged skill to a source for the first time | [Publish](publish.md) |
+| status | Inspect synchronization state | [Status](status.md) |
+| pull | Bring source changes into the project | [Pull](pull.md) |
+| push | Send local changes to the source | [Push](push.md) |
+| uninstall | Remove a skill and its management record from the project | [Uninstall](uninstall.md) |
 
 ## Help
 
-本体install後はCLIのhelpだけで基本操作を確認できる。
+After installing the extension, the CLI help covers the basic operations.
 
 ```bash
 gh linked-skills --help
@@ -29,18 +30,22 @@ gh linked-skills publish --help
 gh linked-skills uninstall --help
 ```
 
-Root helpは目的、Command一覧、基本例を表示する。Command helpは説明、構文、引数、flag、例を表示する。HelpはGitHub認証とGit projectを要求しない。
+Root help shows the purpose, command list, and basic examples. Command help
+shows the description, syntax, arguments, flags, and examples. Help does not
+require GitHub authentication or a Git project.
 
-`-h`は`--help`と同じ。その他のshort flag、`--flag=value`、`--`、top-level `--version`はない。
+`-h` is equivalent to `--help`. The CLI does not support other short flags,
+`--flag=value`, `--`, or a top-level `--version` flag.
 
 ## Exit codes
 
 | Code | Meaning |
 | --- | --- |
-| `0` | success |
-| `1` | operation failure |
-| `2` | usage error |
+| `0` | Success |
+| `1` | Operation failure |
+| `2` | Usage error |
 
-競合を残したpullも`1`。表示と解決手順は[[docs/spec/2_HowToUse/pages/resolve-conflicts|Conflict解決]]を参照。
+A pull that leaves conflicts also exits with `1`. See
+[Resolving conflicts](resolve-conflicts.md) for the output and recovery steps.
 
-内部: [[docs/spec/3_Functions/pages/cli/runtime|CLI runtime]]
+Implementation: [CLI runtime](../../3_Functions/pages/cli/runtime.md)
