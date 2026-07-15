@@ -754,7 +754,8 @@ func runStatus(
 		return 1
 	}
 	for _, record := range records {
-		if hasLocalChanges(record.State) && record.PushEligibility != status.Eligible {
+		if hasLocalChanges(record.State) && record.PushEligibility != status.Eligible &&
+			(record.Proposal == nil || record.Proposal.State != proposal.Waiting) {
 			_, _ = fmt.Fprintf(
 				stderr,
 				"warning: %s has local changes but push is %s (%s); changes remain only in this project\n",
@@ -769,7 +770,7 @@ func runStatus(
 
 func writeStatusTable(writer io.Writer, records []status.Record) error {
 	table := tabwriter.NewWriter(writer, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(table, "SKILL\tPATH\tSTATE\tPULL\tPUSH"); err != nil {
+	if _, err := fmt.Fprintln(table, "SKILL\tPATH\tSTATE\tPROPOSAL\tPULL\tPUSH"); err != nil {
 		return err
 	}
 	for _, record := range records {
@@ -779,10 +780,11 @@ func writeStatusTable(writer io.Writer, records []status.Record) error {
 		}
 		if _, err := fmt.Fprintf(
 			table,
-			"%s\t%s\t%s\t%s\t%s\n",
+			"%s\t%s\t%s\t%s\t%s\t%s\n",
 			record.SkillName,
 			record.Path,
 			state,
+			formatProposal(record.Proposal),
 			formatEligibility(record.PullEligibility, record.PullReason),
 			formatEligibility(record.PushEligibility, record.PushReason),
 		); err != nil {
@@ -790,6 +792,16 @@ func writeStatusTable(writer io.Writer, records []status.Record) error {
 		}
 	}
 	return table.Flush()
+}
+
+func formatProposal(summary *proposal.Summary) string {
+	if summary == nil {
+		return "-"
+	}
+	if summary.Number == 0 {
+		return string(summary.State)
+	}
+	return fmt.Sprintf("#%d %s", summary.Number, summary.State)
 }
 
 func formatEligibility(eligibility status.Eligibility, reason *string) string {

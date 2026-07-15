@@ -61,6 +61,35 @@ func NewService(remote Remote, git Git) *Service {
 	return &Service{remote: remote, git: git}
 }
 
+func Summarize(
+	pulls []PullRequest,
+	repository source.Repository,
+	baseBranch, skillName, sourcePath, localTreeSHA, baseTreeSHA string,
+) (Summary, bool) {
+	request := Request{
+		Repository: repository, BaseBranch: baseBranch, SkillName: skillName, SourcePath: sourcePath,
+	}
+	pull, err := selectActivePull(pulls, request, BranchPrefix(skillName, sourcePath))
+	if err != nil {
+		if errors.Is(err, ErrAmbiguous) {
+			return Summary{State: Ambiguous}, true
+		}
+		return Summary{State: Diverged}, true
+	}
+	if pull == nil {
+		return Summary{}, false
+	}
+	metadata, err := ParseMetadata(pull.Body)
+	if err != nil {
+		return Summary{State: Diverged, Number: pull.Number, URL: pull.URL}, true
+	}
+	state, applied := Classify(localTreeSHA, baseTreeSHA, pull.HeadSHA, metadata)
+	if applied {
+		state = Applied
+	}
+	return Summary{State: state, Number: pull.Number, URL: pull.URL}, true
+}
+
 func (service *Service) FindActive(
 	ctx context.Context,
 	repository source.Repository,

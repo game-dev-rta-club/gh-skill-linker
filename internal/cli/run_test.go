@@ -9,6 +9,7 @@ import (
 
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/discovery"
 	installapp "github.com/game-dev-rta-club/gh-skill-linker/internal/install"
+	"github.com/game-dev-rta-club/gh-skill-linker/internal/proposal"
 	publishapp "github.com/game-dev-rta-club/gh-skill-linker/internal/publish"
 	pullapp "github.com/game-dev-rta-club/gh-skill-linker/internal/pull"
 	pushapp "github.com/game-dev-rta-club/gh-skill-linker/internal/push"
@@ -326,6 +327,34 @@ func TestRunStatusTableWarnsWhenLocalChangesCannotBePushed(t *testing.T) {
 	}
 	if !strings.Contains(stderr.String(), "local changes") {
 		t.Fatalf("stderr = %q, want local changes warning", stderr.String())
+	}
+}
+
+func TestRunStatusTableShowsProposalAsSeparateColumn(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	state := syncstate.Push
+	service := &fakeStatus{records: []status.Record{{
+		SkillName: "sample", Path: ".agents/skills/sample", State: &state,
+		PullEligibility: status.Eligible, PushEligibility: status.Ineligible,
+		PushReason: testStringPointer("open_proposal"),
+		Proposal: &proposal.Summary{
+			State: proposal.Waiting, Number: 42, URL: "https://github.com/owner/repo/pull/42",
+		},
+	}}}
+
+	exitCode := RunWithDependencies(
+		context.Background(), []string{"status"}, &stdout, &stderr,
+		Dependencies{Preflight: fakePreflight{}, Root: fakeRoot{root: "/repo"}, Status: service},
+	)
+
+	if exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%q", exitCode, stderr.String())
+	}
+	for _, want := range []string{"PROPOSAL", "#42 waiting", "open_proposal"} {
+		if !strings.Contains(stdout.String()+stderr.String(), want) {
+			t.Errorf("output = %q / %q, want %q", stdout.String(), stderr.String(), want)
+		}
 	}
 }
 

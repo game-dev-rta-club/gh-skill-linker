@@ -149,7 +149,8 @@ LEARN MORE
 const statusHelp = `Show synchronization and operation eligibility for project Agent Skills.
 
 When synchronization state can be calculated, the table reports clean, pull,
-push, or conflict.
+push, or conflict. PROPOSAL independently reports an open pull request as
+waiting, update, source_changed, obsolete, diverged, or ambiguous.
 Local changes that cannot be pushed are reported as warnings.
 Tag-backed skills report pull and push as ineligible.
 

@@ -38,7 +38,14 @@ const (
 	Diverged      State = "diverged"
 	Ambiguous     State = "ambiguous"
 	Unknown       State = "unknown"
+	Applied       State = "applied"
 )
+
+type Summary struct {
+	State  State  `json:"state"`
+	Number int    `json:"number,omitempty"`
+	URL    string `json:"url,omitempty"`
+}
 
 type PullRequest struct {
 	Number         int

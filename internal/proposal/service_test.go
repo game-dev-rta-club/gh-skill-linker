@@ -331,6 +331,49 @@ func TestMatchingMergedPullRequiresSameRepositoryAndBase(t *testing.T) {
 	}
 }
 
+func TestSummarizeClassifiesOpenProposalAgainstCurrentTimeline(t *testing.T) {
+	pull := openPull(t, 'a', 'b', 'c')
+	repository := source.Repository{Owner: "owner", Name: "repo"}
+
+	tests := []struct {
+		name, local, base string
+		want              State
+	}{
+		{name: "waiting", local: strings.Repeat("b", 40), base: strings.Repeat("a", 40), want: Waiting},
+		{name: "local update", local: strings.Repeat("d", 40), base: strings.Repeat("a", 40), want: Update},
+		{name: "source changed", local: strings.Repeat("d", 40), base: strings.Repeat("e", 40), want: SourceChanged},
+		{name: "obsolete", local: strings.Repeat("a", 40), base: strings.Repeat("a", 40), want: Obsolete},
+		{name: "applied", local: strings.Repeat("b", 40), base: strings.Repeat("b", 40), want: Applied},
+	}
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			summary, found := Summarize(
+				[]PullRequest{pull}, repository, "main", "sample", "skills/sample", test.local, test.base,
+			)
+			if !found || summary.State != test.want || summary.Number != pull.Number {
+				t.Fatalf("Summarize() = %#v, %t", summary, found)
+			}
+		})
+	}
+}
+
+func TestSummarizeReportsAmbiguousProposalWithoutChoosingOne(t *testing.T) {
+	first := openPull(t, 'a', 'b', 'c')
+	second := first
+	second.Number = 8
+	second.URL = "https://github.com/owner/repo/pull/8"
+	second.HeadRef += "-2"
+
+	summary, found := Summarize(
+		[]PullRequest{first, second}, source.Repository{Owner: "owner", Name: "repo"},
+		"main", "sample", "skills/sample", strings.Repeat("b", 40), strings.Repeat("a", 40),
+	)
+
+	if !found || summary.State != Ambiguous || summary.Number != 0 {
+		t.Fatalf("Summarize() = %#v, %t", summary, found)
+	}
+}
+
 func proposalRequest(local source.SkillSnapshot, baseTree string) Request {
 	return Request{
 		Repository:    source.Repository{Owner: "owner", Name: "repo"},
