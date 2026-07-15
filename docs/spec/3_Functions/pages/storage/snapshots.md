@@ -28,8 +28,8 @@ A regular `SKILL.md` is required directly under the root. Validate its
 frontmatter during remote reads and before a push.
 
 - name: ASCII lowercase kebab-case, 1 to 64 bytes
-- description: non-empty after trimming and no more than 1,024 bytes in the
-  original UTF-8
+- description: non-empty after trimming and no more than 1,024 Unicode code
+  points
 - line endings: LF and CRLF supported
 - other fields: preserved
 
@@ -37,9 +37,6 @@ Because the installed destination is derived from name, local name must match
 the parent directory. Managed name remains fixed after synchronization. Status
 and push reject a local mismatch; status and pull reject a source mismatch. The
 source-path basename does not need to match.
-
-The description limit counts bytes, so multibyte text has a stricter effective
-limit than the [Agent Skills specification](https://agentskills.io/specification).
 
 Status validates local frontmatter for push eligibility while preserving pull
 eligibility. Pull does not repeat that validation at start. Only a new install
