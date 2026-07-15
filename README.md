@@ -90,7 +90,9 @@ agent and should be treated as trusted code.
 | Check local and source changes | `gh skill-linker status` |
 | Bring source changes into the project | `gh skill-linker pull SKILL` |
 | Send a local skill change to its source branch | `gh skill-linker push SKILL` |
+| Propose a local skill change for review | `gh skill-linker push SKILL --pr` |
 | Publish a new local skill | `gh skill-linker publish OWNER/REPO SKILL --branch BRANCH` |
+| Propose a new skill for review | `gh skill-linker publish OWNER/REPO SKILL --branch BRANCH --pr` |
 | Stop managing a skill | `gh skill-linker uninstall SKILL` |
 
 Run `gh skill-linker <command> --help` for complete arguments and examples.
