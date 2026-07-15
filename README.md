@@ -1,37 +1,118 @@
-# gh-linked-skills
+# gh-linked-skills — Versioned Agent Skills for GitHub
 
 [![CI](https://github.com/game-dev-rta-club/gh-linked-skills/actions/workflows/ci.yml/badge.svg)](https://github.com/game-dev-rta-club/gh-linked-skills/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/game-dev-rta-club/gh-linked-skills)](https://github.com/game-dev-rta-club/gh-linked-skills/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-A GitHub CLI extension for installing and synchronizing project-local Agent
-Skills from GitHub repositories.
+Install, pin, pull, and publish project-local Agent Skills without hiding their
+source or silently overwriting local work.
 
-It records each managed skill's source repository, path, branch or tag, and
-last synchronized revision. Branch-backed skills can pull and push changes;
-tag-backed skills remain fixed, read-only snapshots.
+`gh-linked-skills` is a GitHub CLI extension for teams that want skill files in
+the project they affect. It records the source repository, path, branch or tag,
+and last synchronized revision so collaborators can review and reproduce the
+same setup.
 
-## Status
+## Quick start
 
-This project is pre-1.0 and supports macOS and Linux. Windows is not currently
-supported.
-
-The project is maintained by volunteers. Response times, releases, fixes, and
-long-term maintenance are not guaranteed.
-
-## Requirements
-
-- macOS or Linux
-- [GitHub CLI](https://cli.github.com/)
-- system Git
-- GitHub authentication from `gh auth login` or a supported token environment
-  variable for remote operations
-
-## Install
+Requirements: macOS or Linux, [GitHub CLI](https://cli.github.com/), system Git,
+and a Git project.
 
 ```sh
 gh extension install game-dev-rta-club/gh-linked-skills
-gh linked-skills --help
+gh linked-skills install game-dev-rta-club/agent-skills --all --tag v1.0.0
+gh linked-skills status
 ```
+
+The install prints the destination of each skill. A successful status check
+looks like this:
+
+```text
+SKILL                PATH                                STATE  PULL                           PUSH
+rubber-duck-caller   .agents/skills/rubber-duck-caller   clean  ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
+rubber-duck-partner  .agents/skills/rubber-duck-partner  clean  ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
+```
+
+Commit the installed files and their source record together:
+
+```sh
+git add .agents/skills .gh-linked-skills.json
+git commit -m "chore: install agent skills"
+```
+
+```text
+your-project/
+├── .agents/skills/<skill>/...   # files the agent reads
+└── .gh-linked-skills.json       # source ref and synchronized revision
+```
+
+The extension does not commit the parent project for you.
+
+## Choose a tag or branch
+
+| Source | Best for | Behavior |
+| --- | --- | --- |
+| `--tag <tag>` | Teams consuming a reviewed release | Fixed, read-only snapshot. `pull` and `push` are disabled. |
+| `--branch <branch>` | Skill authors and collaborators | Tracks a writable branch. Supports `status`, `pull`, and `push`. |
+
+Use a tag when you only need to consume a skill. Use a branch when you intend
+to exchange changes with the source repository.
+
+```sh
+# Install every discovered skill at a fixed release.
+gh linked-skills install OWNER/REPO --all --tag TAG
+
+# List available skills on a branch, then install one by name or path.
+gh linked-skills install OWNER/REPO --branch BRANCH
+gh linked-skills install OWNER/REPO SKILL --branch BRANCH
+```
+
+## What it protects
+
+- Local changes are not silently discarded.
+- A push stops if the source skill changed since the last synchronization.
+- Text conflicts are left as Git-style conflict markers for manual resolution.
+- Tag-backed skills stay fixed and cannot push to their source.
+- The manifest records where every managed skill came from.
+
+Review any Agent Skill before installing it. Skills are instructions to an
+agent and should be treated as trusted code.
+
+## Common workflows
+
+| Goal | Command |
+| --- | --- |
+| Discover skills | `gh linked-skills install OWNER/REPO --branch BRANCH` |
+| Install one skill | `gh linked-skills install OWNER/REPO SKILL --branch BRANCH` |
+| Install a fixed release | `gh linked-skills install OWNER/REPO SKILL --tag TAG` |
+| Check local and source changes | `gh linked-skills status` |
+| Bring source changes into the project | `gh linked-skills pull SKILL` |
+| Send a local skill change to its source branch | `gh linked-skills push SKILL` |
+| Publish a new local skill | `gh linked-skills publish OWNER/REPO SKILL --branch BRANCH` |
+| Stop managing a skill | `gh linked-skills uninstall SKILL` |
+
+Run `gh linked-skills <command> --help` for complete arguments and examples.
+For installation, branch collaboration, tag upgrades, conflicts, and removal,
+see the [user guide](docs/user-guide.md).
+
+## Security and release integrity
+
+Use v0.5.3 or later. Releases from v0.5.3 onward are immutable and include
+SHA-256 checksums and signed GitHub build provenance. Earlier releases remain
+available only as historical records.
+
+See [Verifying release artifacts](docs/release-verification.md) for the exact
+checksum and attestation commands. Read the
+[safety model](docs/spec/3_Functions/pages/architecture/safety-model.md) before
+automating write operations. Report vulnerabilities privately as described in
+[SECURITY.md](SECURITY.md).
+
+## Requirements and upgrades
+
+- macOS or Linux; Windows is not currently supported
+- [GitHub CLI](https://cli.github.com/)
+- system Git
+- `gh auth login` or a supported token environment variable for remote
+  operations
 
 Upgrade an existing installation with:
 
@@ -39,73 +120,19 @@ Upgrade an existing installation with:
 gh extension upgrade game-dev-rta-club/gh-linked-skills
 ```
 
-## Verify a release
+## Documentation
 
-Use v0.5.3 or later. Earlier releases remain available only as historical
-records. Releases from v0.5.3 onward are immutable and include SHA-256
-checksums and signed GitHub build provenance.
+Start at the [documentation index](docs/README.md) for links organized by goal.
+The detailed design specifications are retained separately for contributors.
 
-Download a release into an empty directory:
+## Project status
 
-```sh
-version=v0.5.3
-gh release download "$version" --repo game-dev-rta-club/gh-linked-skills
-```
+This project is pre-1.0 and maintained by volunteers. Response times, releases,
+fixes, and long-term maintenance are not guaranteed. There is no support SLA.
 
-Verify the checksums with `sha256sum -c SHA256SUMS` on Linux or
-`shasum -a 256 -c SHA256SUMS` on macOS. Then verify that every asset came from
-the release workflow, tag, and a GitHub-hosted runner:
-
-```sh
-for asset in SHA256SUMS gh-linked-skills_"$version"_*; do
-  gh attestation verify "$asset" \
-    --repo game-dev-rta-club/gh-linked-skills \
-    --signer-workflow game-dev-rta-club/gh-linked-skills/.github/workflows/release.yml \
-    --source-ref "refs/tags/$version" \
-    --deny-self-hosted-runners
-done
-```
-
-## Quick start
-
-Run the extension inside an existing Git project. This example installs the
-versioned Game Dev RTA Club skill set:
-
-```sh
-gh linked-skills install game-dev-rta-club/agent-skills --all --tag v1.0.0
-git add .agents/skills .gh-linked-skills.json
-git commit -m "chore: install agent skills"
-```
-
-Managed skills are stored at `.agents/skills/<name>`. Commit both the installed
-skills and `.gh-linked-skills.json` so collaborators use the same source.
-
-## Commands
-
-```text
-gh linked-skills install <owner>/<repository> [<skill-or-path>] (--branch <branch> | --tag <tag>)
-gh linked-skills publish <owner>/<repository> <skill> --branch <branch>
-gh linked-skills status [--json]
-gh linked-skills pull <skill>
-gh linked-skills push <skill>
-gh linked-skills uninstall <skill> [--force]
-```
-
-Install without a skill name lists available skills. Add `--all` to install
-every discovered skill. Run `gh linked-skills <command> --help` for complete
-arguments and examples.
-
-## Synchronization model
-
-- Branch sources are writable and support `status`, `pull`, and `push`.
-- Tag sources are fixed snapshots and cannot be pulled or pushed.
-- Local changes are not silently discarded.
-- Conflicting pulls write Git-style conflict markers for manual resolution.
-- Push is rejected when the remote branch changed after the last synchronization.
-
-Read the [safety model](docs/spec/3_Functions/pages/architecture/safety-model.md)
-before automating write operations. The [documentation index](docs/README.md)
-links to the complete command and implementation reference.
+Use [GitHub Issues](https://github.com/game-dev-rta-club/gh-linked-skills/issues)
+for reproducible bugs and proposed improvements. General contact is available
+through the [Game Dev RTA Club Google Group](https://groups.google.com/g/game-dev-rta-club).
 
 ## Development
 
@@ -118,15 +145,6 @@ go test -race ./...
 go vet ./...
 go build ./...
 ```
-
-## Support and maintenance
-
-Use [GitHub Issues](https://github.com/game-dev-rta-club/gh-linked-skills/issues)
-for reproducible bugs and proposed improvements. General contact is available
-through the [Game Dev RTA Club Google Group](https://groups.google.com/g/game-dev-rta-club).
-
-There is no support SLA. Report vulnerabilities privately as described in
-[SECURITY.md](SECURITY.md).
 
 ## Contributing
 
