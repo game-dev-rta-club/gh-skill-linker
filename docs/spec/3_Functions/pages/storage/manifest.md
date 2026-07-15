@@ -6,11 +6,14 @@ status: implemented
 
 # Manifest
 
-Source identityと最後の同期点をproject rootへ永続化する。
+Persist source identity and the last synchronization point at the project root.
 
 ## MAN-001 Location
 
-Project rootの`.gh-linked-skills.json`が唯一の台帳。不存在時はschema v2の空document。Regular fileのみ。Symlink、unknown field、複数JSON、trailing data、不正schemaを拒否する。
+`.gh-linked-skills.json` at the project root is the only registry. When absent,
+it represents an empty schema-v2 document. It must be a regular file. Reject
+symlinks, unknown fields, multiple JSON values, trailing data, and invalid
+schemas.
 
 ## MAN-002 Schema version 2
 
@@ -31,23 +34,29 @@ Project rootの`.gh-linked-skills.json`が唯一の台帳。不存在時はschem
 }
 ```
 
-Schema v1は読取時にmemory上でv2へ変換する。Writeはv2だけを出力する。
+Schema v1 is converted to v2 in memory when read. Writes emit only v2.
 
 ## MAN-003 Validation
 
-- name: lower kebab-case、1〜64文字
+- name: lowercase kebab-case, 1 to 64 characters
 - repository: `https://github.com/<owner>/<repo>[.git]`
 - path: relative canonical POSIX path
-- sourceRef: `refs/heads/`または`refs/tags/`とvalid ref name
-- SHA: 40/64 lowercase hex
+- sourceRef: `refs/heads/` or `refs/tags/` plus a valid ref name
+- SHA: 40 or 64 lowercase hexadecimal characters
 - destination: `.agents/skills/<key>`
 
 ## MAN-004 Write and optimistic comparison
 
-2-space JSON + newlineをtemporary fileへ書く。HTML escape無効、`chmod 0644`、file fsync、同一directory rename。Directory fsyncはしない。
+Write two-space JSON plus a newline to a temporary file. Disable HTML escaping,
+set mode `0644`, fsync the file, and rename it within the same directory. The
+directory is not fsynced.
 
-Baseline更新とuninstall削除は開始時entry=current entryの場合だけ。Publish追加は書込直前に開始時documentと再読documentを比較する。他entryは保持。不一致は`management file changed during operation`。
+Update a baseline or delete during uninstall only when the starting entry still
+equals the current entry. Before publish adds an entry, compare the starting
+document with a reread document. Preserve other entries. A mismatch returns
+`management file changed during operation`.
 
-Process lockはないため、比較とrenameをまたぐinterprocess atomicityは保証しない。
+Without a process lock, atomicity is not guaranteed across the comparison and
+rename between processes.
 
-Ref model: [[docs/spec/3_Functions/pages/architecture/source-reference|Source reference]]
+Reference model: [Source references](../architecture/source-reference.md)

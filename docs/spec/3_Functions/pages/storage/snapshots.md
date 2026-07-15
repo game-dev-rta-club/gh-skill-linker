@@ -1,42 +1,55 @@
 ---
 title: Snapshot specification
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Snapshots
 
-Skillを比較・転送する最小単位を定義する。
+Define the smallest unit used to compare and transfer a skill.
 
 ## SNAP-001 Snapshot identity
 
-完全一致対象:
+Exact identity includes:
 
-- relative path集合
-- raw byte
-- 実行可否
+- the set of relative paths
+- raw bytes
+- executable state
 
-YAML意味、改行変換、timestamp、directoryは比較しない。Any execute bitでexecutable。
+YAML meaning, newline conversion, timestamps, and directories are not compared.
+Any execute bit means executable.
 
 ## SNAP-002 Supported entries
 
-Remoteは`100644/100755` blobのみ。Localはregular fileのみ。Symlink、submodule、特殊mode/file、truncated treeを拒否。
+Remote entries must be `100644` or `100755` blobs. Local entries must be regular
+files. Reject symlinks, submodules, special modes or files, and truncated trees.
 
-Root直下にregular `SKILL.md`必須。Remote readとpush前にfrontmatterを検証する。
+A regular `SKILL.md` is required directly under the root. Validate its
+frontmatter during remote reads and before a push.
 
-- name: ASCII lower kebab-case、1〜64 byte
-- description: trim後non-empty、元UTF-8で1024 byte以下
-- LF/CRLF対応
-- 他fieldは保持
+- name: ASCII lowercase kebab-case, 1 to 64 bytes
+- description: non-empty after trimming and no more than 1,024 bytes in the
+  original UTF-8
+- line endings: LF and CRLF supported
+- other fields: preserved
 
-Installed destinationはnameから決まるため、localではnameとparent directoryが一致する。Managed nameは同期後も固定し、status/pushはlocal、status/pullはsourceの不一致を拒否する。Source pathのbasename一致は検証しない。
+Because the installed destination is derived from name, local name must match
+the parent directory. Managed name remains fixed after synchronization. Status
+and push reject a local mismatch; status and pull reject a source mismatch. The
+source-path basename does not need to match.
 
-Descriptionの上限はbyte数で判定するため、multibyte textでは[Agent Skills specification](https://agentskills.io/specification)より厳しい。
+The description limit counts bytes, so multibyte text has a stricter effective
+limit than the [Agent Skills specification](https://agentskills.io/specification).
 
-Statusはpush eligibilityのためlocal frontmatterを検証するが、pull eligibilityは維持する。Pull開始時は再検証しない。LFS pointer拒否は新規installだけ。
+Status validates local frontmatter for push eligibility while preserving pull
+eligibility. Pull does not repeat that validation at start. Only a new install
+rejects an LFS pointer.
 
 ## SNAP-003 Write mode and umask boundary
 
-Write modeは`0644/0755`。作成後chmodしないためumask依存。Execute bitを落とすumaskでは`100755`を再現できない。[Go `os.WriteFile`](https://pkg.go.dev/os#WriteFile)も作成modeはumask適用前と定義する。
+Write modes are `0644/0755`. Because files are not chmodded after creation, the
+system umask applies. A umask that removes execute bits prevents reproduction of
+`100755`. Go [`os.WriteFile`](https://pkg.go.dev/os#WriteFile) also defines its
+creation mode before umask application.
 
-Manifestだけ明示的に`chmod 0644`。
+Only the manifest receives an explicit `chmod 0644`.
