@@ -1,13 +1,13 @@
 # Linked Skills
 
-GitHub CLI extension for installing, publishing, checking, pulling, and pushing project-local agent skills without `gh skill`.
+GitHub CLI extension for installing, publishing, checking, pulling, pushing, and uninstalling project-local agent skills without `gh skill`.
 
 ## Requirements
 
 - macOS or Linux
 - GitHub CLI
 - system Git
-- a GitHub.com token from `gh auth login` or a supported environment variable
+- a GitHub.com token from `gh auth login` or a supported environment variable for remote operations
 
 ## Install
 
@@ -27,6 +27,7 @@ gh linked-skills publish <owner>/<repository> <skill> --branch <branch>
 gh linked-skills status [--json]
 gh linked-skills pull <skill>
 gh linked-skills push <skill>
+gh linked-skills uninstall <skill> [--force]
 ```
 
 All commands operate on the current Git project. Install requires an explicit GitHub repository and exactly one branch or tag; local or repository-less installation is not supported. Publish sends an unmanaged `.agents/skills/<name>` to an existing repository. Managed skills are installed at `.agents/skills/<name>`.

@@ -300,6 +300,57 @@ func TestStoreAddDoesNotOverwriteConcurrentManifestChange(t *testing.T) {
 	}
 }
 
+func TestStoreRemoveDeletesOnlyMatchingSkill(t *testing.T) {
+	root := t.TempDir()
+	store := Store{}
+	expected := validSkill("sample")
+	other := validSkill("other")
+	other.SourcePath = "skills/other"
+	if err := store.Write(root, Document{SchemaVersion: CurrentSchemaVersion, Skills: map[string]Skill{
+		"sample": expected,
+		"other":  other,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := store.Remove(root, "sample", expected); err != nil {
+		t.Fatalf("Remove() error = %v", err)
+	}
+	document, err := store.Read(root)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, exists := document.Skills["sample"]; exists || !reflect.DeepEqual(document.Skills["other"], other) {
+		t.Fatalf("document = %#v, want only unchanged other skill", document)
+	}
+}
+
+func TestStoreRemoveRejectsConcurrentEntryChange(t *testing.T) {
+	root := t.TempDir()
+	store := Store{}
+	expected := validSkill("sample")
+	changed := expected
+	changed.SourceRef = "refs/heads/next"
+	if err := store.Write(root, Document{SchemaVersion: CurrentSchemaVersion, Skills: map[string]Skill{
+		"sample": changed,
+	}}); err != nil {
+		t.Fatal(err)
+	}
+
+	err := store.Remove(root, "sample", expected)
+
+	if !errors.Is(err, ErrManifestChanged) {
+		t.Fatalf("Remove() error = %v, want ErrManifestChanged", err)
+	}
+	document, readErr := store.Read(root)
+	if readErr != nil {
+		t.Fatal(readErr)
+	}
+	if !reflect.DeepEqual(document.Skills["sample"], changed) {
+		t.Fatalf("sample = %#v, want concurrent entry preserved", document.Skills["sample"])
+	}
+}
+
 func validDocument(name string, mutators ...func(*Skill)) Document {
 	skill := validSkill(name)
 	for _, mutate := range mutators {

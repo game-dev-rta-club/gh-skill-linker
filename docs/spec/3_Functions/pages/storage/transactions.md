@@ -1,6 +1,6 @@
 ---
 title: Transaction specification
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
@@ -21,6 +21,7 @@ Pullは2回のrename間で終了するとtargetが消え、backupだけ残り得
 | pull | original復元 |
 | push | remoteを戻さない |
 | publish | remoteを戻さない。同じcommandでmanifest登録を再試行 |
+| uninstall | 移動済みのoriginalを復元 |
 | manifest | fsync後、同一directoryでrename |
 
 Rollback失敗時はbackup pathをerrorへ含め、transactionを残す。

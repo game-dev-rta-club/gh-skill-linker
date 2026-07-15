@@ -121,6 +121,19 @@ func (store Store) Add(projectRoot, name string, expected Document, skill Skill)
 	return store.Write(projectRoot, current)
 }
 
+func (store Store) Remove(projectRoot, name string, expected Skill) error {
+	document, err := store.Read(projectRoot)
+	if err != nil {
+		return err
+	}
+	current, ok := document.Skills[name]
+	if !ok || !reflect.DeepEqual(current, expected) {
+		return ErrManifestChanged
+	}
+	delete(document.Skills, name)
+	return store.Write(projectRoot, document)
+}
+
 func (Store) Read(projectRoot string) (Document, error) {
 	manifestPath := filepath.Join(filepath.Clean(projectRoot), FileName)
 	info, err := os.Lstat(manifestPath)

@@ -16,9 +16,10 @@ var (
 )
 
 type LocalSkill struct {
-	Files      map[string][]byte
-	Executable map[string]bool
-	Snapshot   syncstate.Snapshot
+	Files            map[string][]byte
+	Executable       map[string]bool
+	EmptyDirectories map[string]bool
+	Snapshot         syncstate.Snapshot
 }
 
 func ReadSkill(root string) (LocalSkill, error) {
@@ -32,15 +33,24 @@ func ReadSkill(root string) (LocalSkill, error) {
 	}
 
 	result := LocalSkill{
-		Files:      make(map[string][]byte),
-		Executable: make(map[string]bool),
-		Snapshot:   make(syncstate.Snapshot),
+		Files:            make(map[string][]byte),
+		Executable:       make(map[string]bool),
+		EmptyDirectories: make(map[string]bool),
+		Snapshot:         make(syncstate.Snapshot),
 	}
+	directories := map[string]bool{root: false}
 	err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil {
 			return walkErr
 		}
-		if path == root || entry.IsDir() {
+		if path == root {
+			return nil
+		}
+		directories[filepath.Dir(path)] = true
+		if entry.IsDir() {
+			if _, exists := directories[path]; !exists {
+				directories[path] = false
+			}
 			return nil
 		}
 		info, err := entry.Info()
@@ -66,6 +76,16 @@ func ReadSkill(root string) (LocalSkill, error) {
 	})
 	if err != nil {
 		return LocalSkill{}, fmt.Errorf("read skill %s: %w", root, err)
+	}
+	for directory, hasChildren := range directories {
+		if directory == root || hasChildren {
+			continue
+		}
+		relative, err := filepath.Rel(root, directory)
+		if err != nil {
+			return LocalSkill{}, fmt.Errorf("read skill %s: %w", root, err)
+		}
+		result.EmptyDirectories[filepath.ToSlash(relative)] = true
 	}
 	return result, nil
 }

@@ -24,6 +24,7 @@ import (
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/source"
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/status"
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/syncstate"
+	uninstallapp "github.com/game-dev-rta-club/gh-linked-skills/internal/uninstall"
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/workspace"
 )
 
@@ -47,6 +48,14 @@ type PullService interface {
 
 type PushService interface {
 	Push(ctx context.Context, projectRoot, selector string) (pushapp.Result, error)
+}
+
+type UninstallService interface {
+	Uninstall(
+		ctx context.Context,
+		projectRoot, selector string,
+		options uninstallapp.Options,
+	) (uninstallapp.Result, error)
 }
 
 type PublishService interface {
@@ -74,13 +83,14 @@ type Dependencies struct {
 	Status           StatusService
 	Pull             PullService
 	Push             PushService
+	Uninstall        UninstallService
 	Publish          PublishService
 	ManagedInstaller ManagedInstaller
 }
 
 func Run(ctx context.Context, args []string, stdout io.Writer, stderr io.Writer) int {
 	if needsDependencies(args) {
-		dependencies, err := defaultDependencies()
+		dependencies, err := defaultDependencies(args)
 		if err != nil {
 			_, _ = fmt.Fprintln(stderr, err)
 			return 1
@@ -105,14 +115,24 @@ func needsDependencies(args []string) bool {
 		return len(args) == 1 || (len(args) == 2 && args[1] == "--json")
 	case "pull", "push":
 		return len(args) == 2 && args[1] != ""
+	case "uninstall":
+		_, err := parseUninstallArgs(args[1:])
+		return err == nil
 	default:
 		return false
 	}
 }
 
-func defaultDependencies() (Dependencies, error) {
+func defaultDependencies(args []string) (Dependencies, error) {
 	ghRunner := command.New("gh")
 	gitRunner := command.New("git")
+	dependencies := Dependencies{
+		Root:      gitcli.New(gitRunner),
+		Uninstall: uninstallapp.NewService(manifest.Store{}, workspace.Reader{}, workspace.Writer{}),
+	}
+	if len(args) > 0 && args[0] == "uninstall" {
+		return dependencies, nil
+	}
 	token, _ := auth.TokenForHost("github.com")
 	if token == "" {
 		return Dependencies{}, fmt.Errorf("GitHub authentication is required; run gh auth login")
@@ -127,38 +147,36 @@ func defaultDependencies() (Dependencies, error) {
 	if err != nil {
 		return Dependencies{}, err
 	}
-	return Dependencies{
-		Preflight: compat.NewChecker(ghRunner),
-		Root:      gitcli.New(gitRunner),
-		Status: status.NewService(
-			manifest.Store{},
-			workspace.Reader{},
-			github,
-			gitcli.New(gitRunner),
-		),
-		Pull: pullapp.NewService(
-			manifest.Store{},
-			workspace.Reader{},
-			github,
-			gitcli.New(gitRunner),
-			workspace.Writer{},
-		),
-		Push: pushapp.NewService(
-			manifest.Store{},
-			workspace.Reader{},
-			github,
-			gitcli.New(gitRunner),
-			gitcli.New(pushGitRunner),
-		),
-		Publish: publishapp.NewService(
-			manifest.Store{},
-			workspace.Reader{},
-			github,
-			gitcli.New(gitRunner),
-			gitcli.New(pushGitRunner),
-		),
-		ManagedInstaller: installapp.NewService(github, manifest.Store{}, workspace.Writer{}),
-	}, nil
+	dependencies.Preflight = compat.NewChecker(ghRunner)
+	dependencies.Status = status.NewService(
+		manifest.Store{},
+		workspace.Reader{},
+		github,
+		gitcli.New(gitRunner),
+	)
+	dependencies.Pull = pullapp.NewService(
+		manifest.Store{},
+		workspace.Reader{},
+		github,
+		gitcli.New(gitRunner),
+		workspace.Writer{},
+	)
+	dependencies.Push = pushapp.NewService(
+		manifest.Store{},
+		workspace.Reader{},
+		github,
+		gitcli.New(gitRunner),
+		gitcli.New(pushGitRunner),
+	)
+	dependencies.Publish = publishapp.NewService(
+		manifest.Store{},
+		workspace.Reader{},
+		github,
+		gitcli.New(gitRunner),
+		gitcli.New(pushGitRunner),
+	)
+	dependencies.ManagedInstaller = installapp.NewService(github, manifest.Store{}, workspace.Writer{})
+	return dependencies, nil
 }
 
 func RunWithDependencies(
@@ -195,8 +213,77 @@ func RunWithDependencies(
 	if args[0] == "push" {
 		return runPush(ctx, args[1:], stdout, stderr, dependencies)
 	}
+	if args[0] == "uninstall" {
+		return runUninstall(ctx, args[1:], stdout, stderr, dependencies)
+	}
 	_, _ = fmt.Fprintf(stderr, "unknown command %q\n\n%s", args[0], rootHelp)
 	return 2
+}
+
+type uninstallRequest struct {
+	selector string
+	force    bool
+}
+
+func parseUninstallArgs(args []string) (uninstallRequest, error) {
+	request := uninstallRequest{}
+	for _, argument := range args {
+		switch argument {
+		case "--force":
+			if request.force {
+				return uninstallRequest{}, fmt.Errorf("--force may be specified only once")
+			}
+			request.force = true
+		default:
+			if strings.HasPrefix(argument, "-") {
+				return uninstallRequest{}, fmt.Errorf("unknown uninstall flag %q", argument)
+			}
+			if request.selector != "" {
+				return uninstallRequest{}, fmt.Errorf("exactly one skill must be specified")
+			}
+			request.selector = argument
+		}
+	}
+	if request.selector == "" {
+		return uninstallRequest{}, fmt.Errorf("skill is required")
+	}
+	return request, nil
+}
+
+func runUninstall(
+	ctx context.Context,
+	args []string,
+	stdout io.Writer,
+	stderr io.Writer,
+	dependencies Dependencies,
+) int {
+	request, err := parseUninstallArgs(args)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, "usage: gh linked-skills uninstall SKILL [--force]")
+		_, _ = fmt.Fprintln(stderr, err)
+		return 2
+	}
+	if dependencies.Root == nil || dependencies.Uninstall == nil {
+		_, _ = fmt.Fprintln(stderr, "uninstall dependencies are not configured")
+		return 1
+	}
+	root, err := dependencies.Root.Root(ctx)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	result, err := dependencies.Uninstall.Uninstall(
+		ctx,
+		root,
+		request.selector,
+		uninstallapp.Options{Force: request.force},
+	)
+	if err != nil {
+		_, _ = fmt.Fprintln(stderr, err)
+		return 1
+	}
+	_, _ = fmt.Fprintf(stdout, "uninstalled %s from %s\n", result.Name, result.Path)
+	return 0
 }
 
 type publishRequest struct {

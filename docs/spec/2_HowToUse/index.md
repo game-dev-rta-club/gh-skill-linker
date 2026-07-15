@@ -22,6 +22,7 @@ status: implemented
 - [[docs/spec/2_HowToUse/pages/status|Status]]
 - [[docs/spec/2_HowToUse/pages/pull|Pull]]
 - [[docs/spec/2_HowToUse/pages/push|Push]]
+- [[docs/spec/2_HowToUse/pages/uninstall|Uninstall]]
 - [[docs/spec/2_HowToUse/pages/resolve-conflicts|Conflict]]
 - [[docs/spec/2_HowToUse/pages/command-reference|Commands]]
 

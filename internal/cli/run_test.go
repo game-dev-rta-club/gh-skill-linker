@@ -15,6 +15,7 @@ import (
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/source"
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/status"
 	"github.com/game-dev-rta-club/gh-linked-skills/internal/syncstate"
+	uninstallapp "github.com/game-dev-rta-club/gh-linked-skills/internal/uninstall"
 )
 
 type fakePreflight struct{ err error }
@@ -56,6 +57,25 @@ type fakePublish struct {
 	result     publishapp.Result
 	err        error
 	calls      int
+}
+
+type fakeUninstaller struct {
+	root     string
+	selector string
+	options  uninstallapp.Options
+	result   uninstallapp.Result
+	err      error
+	calls    int
+}
+
+func (f *fakeUninstaller) Uninstall(
+	_ context.Context,
+	root, selector string,
+	options uninstallapp.Options,
+) (uninstallapp.Result, error) {
+	f.calls++
+	f.root, f.selector, f.options = root, selector, options
+	return f.result, f.err
 }
 
 func (f *fakePublish) Publish(
@@ -137,7 +157,7 @@ func TestRunHelp(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("Run() exit code = %d, want 0", exitCode)
 	}
-	for _, want := range []string{"USAGE", "AVAILABLE COMMANDS", "EXAMPLES", "LEARN MORE", "gh linked-skills install OWNER/REPO", "publish"} {
+	for _, want := range []string{"USAGE", "AVAILABLE COMMANDS", "EXAMPLES", "LEARN MORE", "gh linked-skills install OWNER/REPO", "publish", "uninstall"} {
 		if !strings.Contains(stdout.String(), want) {
 			t.Errorf("stdout = %q, want %q", stdout.String(), want)
 		}
@@ -165,6 +185,7 @@ func TestRunCommandHelp(t *testing.T) {
 		{name: "status help", args: []string{"status", "--help"}, want: "--json"},
 		{name: "pull help", args: []string{"pull", "--help"}, want: "CONFLICT"},
 		{name: "push help", args: []string{"push", "--help"}, want: "write permission"},
+		{name: "uninstall help", args: []string{"uninstall", "--help"}, want: "--force"},
 	}
 
 	for _, test := range tests {
@@ -204,6 +225,9 @@ func TestNeedsDependenciesOnlyAfterValidArguments(t *testing.T) {
 		{args: []string{"status", "extra"}, want: false},
 		{args: []string{"pull", "skill"}, want: true},
 		{args: []string{"pull", "--help"}, want: false},
+		{args: []string{"uninstall", "sample"}, want: true},
+		{args: []string{"uninstall", "sample", "--force"}, want: true},
+		{args: []string{"uninstall"}, want: false},
 	}
 
 	for _, test := range tests {
@@ -410,6 +434,49 @@ func TestRunPushRejectsMissingSelector(t *testing.T) {
 
 	if exitCode != 2 {
 		t.Fatalf("Run() exit code = %d, want 2", exitCode)
+	}
+}
+
+func TestRunUninstallPassesSelectorAndForce(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	service := &fakeUninstaller{result: uninstallapp.Result{Name: "sample", Path: ".agents/skills/sample"}}
+
+	exitCode := RunWithDependencies(context.Background(), []string{"uninstall", "sample", "--force"}, &stdout, &stderr, Dependencies{
+		Root: fakeRoot{root: "/repo"}, Uninstall: service,
+	})
+
+	if exitCode != 0 || stderr.Len() != 0 {
+		t.Fatalf("exit=%d stderr=%q", exitCode, stderr.String())
+	}
+	if service.calls != 1 || service.root != "/repo" || service.selector != "sample" || !service.options.Force {
+		t.Fatalf("uninstall request = %#v", service)
+	}
+	if !strings.Contains(stdout.String(), "uninstalled sample from .agents/skills/sample") {
+		t.Fatalf("stdout = %q", stdout.String())
+	}
+}
+
+func TestRunUninstallRejectsInvalidArguments(t *testing.T) {
+	tests := [][]string{
+		{"uninstall"},
+		{"uninstall", "sample", "extra"},
+		{"uninstall", "sample", "--force", "--force"},
+		{"uninstall", "sample", "--unknown"},
+		{"uninstall", "--force"},
+	}
+	for _, args := range tests {
+		var stdout bytes.Buffer
+		var stderr bytes.Buffer
+		service := &fakeUninstaller{}
+
+		exitCode := RunWithDependencies(context.Background(), args, &stdout, &stderr, Dependencies{
+			Root: fakeRoot{root: "/repo"}, Uninstall: service,
+		})
+
+		if exitCode != 2 || service.calls != 0 {
+			t.Errorf("args=%q exit=%d calls=%d stderr=%q", args, exitCode, service.calls, stderr.String())
+		}
 	}
 }
 

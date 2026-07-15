@@ -17,3 +17,7 @@ func (Writer) Install(path string, remote source.SkillSnapshot) error {
 func (Writer) ReplaceExact(path string, remote source.SkillSnapshot, expected LocalSkill, commit func() error) error {
 	return ReplaceExact(path, remote, expected, commit)
 }
+
+func (Writer) Remove(path string, expected *LocalSkill, commit func() error) error {
+	return RemoveSkill(path, expected, commit)
+}

@@ -11,4 +11,5 @@ status: implemented
 - [[docs/spec/3_Functions/pages/operations/status|Status]]
 - [[docs/spec/3_Functions/pages/operations/pull|Pull]]
 - [[docs/spec/3_Functions/pages/operations/push|Push]]
+- [[docs/spec/3_Functions/pages/operations/uninstall|Uninstall]]
 - [[docs/spec/3_Functions/pages/operations/conflict-merge|Merge]]

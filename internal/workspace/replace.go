@@ -113,6 +113,7 @@ func replaceSkill(target string, remote source.SkillSnapshot, document []byte, e
 
 func sameLocalSkill(left, right LocalSkill) bool {
 	if !reflect.DeepEqual(left.Executable, right.Executable) ||
+		!reflect.DeepEqual(left.EmptyDirectories, right.EmptyDirectories) ||
 		len(left.Files) != len(right.Files) {
 		return false
 	}

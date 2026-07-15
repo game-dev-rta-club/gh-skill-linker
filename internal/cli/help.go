@@ -17,6 +17,7 @@ AVAILABLE COMMANDS
   status    Show project skill synchronization state
   pull      Pull one managed skill from its source branch
   push      Push one managed skill to its source branch
+  uninstall Remove one managed skill from the current project
 
 INHERITED FLAGS
   -h, --help   Show help for command
@@ -38,6 +39,9 @@ EXAMPLES
   # Synchronize one managed skill
   $ gh linked-skills pull SKILL
   $ gh linked-skills push SKILL
+
+  # Remove one managed skill from this project
+  $ gh linked-skills uninstall SKILL
 
 LEARN MORE
   Use gh linked-skills <command> --help for more information about a command.
@@ -187,6 +191,29 @@ EXAMPLES
   $ gh linked-skills push brainstorming
 `
 
+const uninstallHelp = `Remove one managed Agent Skill from the current project.
+
+The skill directory and its entry in .gh-linked-skills.json are removed. The
+source repository is never changed. Local changes are rejected by default; use
+--force only when those changes may be discarded. A missing skill directory is
+cleaned up by removing its stale management entry. GitHub authentication and a
+network connection are not required.
+
+USAGE
+  gh linked-skills uninstall SKILL [--force]
+
+ARGUMENTS
+  SKILL   Managed skill name or project-relative path
+
+FLAGS
+      --force   Discard local changes while uninstalling
+  -h, --help    Show help for command
+
+EXAMPLES
+  $ gh linked-skills uninstall brainstorming
+  $ gh linked-skills uninstall .agents/skills/brainstorming --force
+`
+
 func requestedHelp(args []string) (string, bool, error) {
 	if len(args) == 1 && isHelpFlag(args[0]) {
 		return rootHelp, true, nil
@@ -229,6 +256,8 @@ func commandHelp(command string) (string, bool) {
 		return pullHelp, true
 	case "push":
 		return pushHelp, true
+	case "uninstall":
+		return uninstallHelp, true
 	default:
 		return "", false
 	}

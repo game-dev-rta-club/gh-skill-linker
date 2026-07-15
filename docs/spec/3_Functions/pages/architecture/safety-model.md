@@ -1,6 +1,6 @@
 ---
 title: Safety model
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
@@ -12,6 +12,7 @@ status: implemented
 - publish: 未管理skillだけを空remote pathへ追加する。一致済みpathは採用し、不一致は上書きしない
 - pull: 新内容をstageし、localを再読してから入れ替える。manifest失敗時は元へ戻す
 - push: source skillのtree SHAをclone後にも再確認し、normal pushだけを使う
+- uninstall: local変更を通常削除せず、`--force`だけが同期点との差分を破棄する
 - merge: text conflictはmarkerを残し、binary/構造conflictはworkspace変更前に停止する
 - credential: repository configへ保存せず、logではredactする
 
