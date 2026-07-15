@@ -1,33 +1,45 @@
 ---
 title: Pull reference
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Pull
 
-Tag sourceはlocal/remote読取前に`fixed_source_ref`で拒否する。
+Reject a tag source with `fixed_source_ref` before reading local or remote
+content.
 
-Current sourceをlocalへ適用し、必要ならthree-way mergeする。
+Apply the current source to local content, using a three-way merge when needed.
 
 ## PULL-001 Selection and prerequisites
 
-Nameまたはproject-relative destinationで一意に選ぶ。0件/複数件はerror。
+Select exactly one skill by name or project-relative destination. Zero or
+multiple matches are errors.
 
-全local fileをtracked必須とする。Manifestのtracked状態は見ない。Marker、unsafe path、invalid source、managed nameと異なるsource、remote failureでは変更しない。
+Every local file must be tracked. The manifest's tracked state is ignored.
+Markers, unsafe paths, an invalid source, a source name different from the
+managed name, or a remote failure leave content unchanged.
 
 ## PULL-002 No-op and baseline-only update
 
-Local=currentならcontentを変えない。SHAも同じならno-op。SHAだけ進んだ場合はbaselineを更新し`Changed=true`。
+When local equals current, do not change content. Matching SHAs are a no-op. If
+only the SHA advanced, update the baseline and return `Changed=true`.
 
 ## PULL-003 Clean and merged apply
 
-Local=baseならcurrentへ置換。それ以外はthree-way mergeする。
+When local equals base, replace it with current. Otherwise, perform a three-way
+merge.
 
-同じparentへstageし、targetをbackupへrenameする。Target再読が開始時snapshotと違えばrollbackし、`workspace changed during pull`。
+Stage under the same parent and rename the target to a backup. Reread the target
+before activation; if it differs from the starting snapshot, roll back and
+return `workspace changed during pull`.
 
-Activate後にbaselineを更新。Manifest失敗はoriginalへ戻す。rollback失敗はbackup pathを返し、transactionを残す。
+Update the baseline after activation. A manifest failure restores the original
+directory. A failed rollback returns the backup path and leaves the transaction
+for recovery.
 
-Backup削除だけ失敗した場合もerror。ただしnew content/baselineは有効。Marker生成時もbaselineを進める。
+A failure to remove only the backup is still an error, but new content and the
+baseline remain valid. The baseline also advances when markers are produced.
 
-Text conflictはproject-relative pathをsort済み`ConflictPaths`として返す。CLIはfileを列挙してexit `1`。
+Return text-conflict paths, sorted and project-relative, as `ConflictPaths`.
+The CLI lists the files and exits with `1`.
