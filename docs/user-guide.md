@@ -1,0 +1,163 @@
+# User guide
+
+`gh-linked-skills` installs Agent Skills from GitHub into `.agents/skills/` and
+records their source in `.gh-linked-skills.json`. Run it from the Git project
+that should use the skills.
+
+## 1. Install the extension
+
+Requirements:
+
+- macOS or Linux
+- [GitHub CLI](https://cli.github.com/) and system Git
+- GitHub authentication from `gh auth login` or a supported token environment
+  variable
+
+```sh
+gh extension install game-dev-rta-club/gh-linked-skills
+gh linked-skills --help
+```
+
+Upgrade later with:
+
+```sh
+gh extension upgrade game-dev-rta-club/gh-linked-skills
+```
+
+## 2. Choose a source
+
+Every install requires a GitHub repository and either a tag or a branch.
+
+| Source | Choose it when | Available synchronization |
+| --- | --- | --- |
+| Tag | You consume a reviewed release | `status`; no `pull` or `push` |
+| Branch | You author or collaborate on the source | `status`, `pull`, and `push` |
+
+There is no implicit default branch, local-directory source, or floating
+version range. The source is always explicit.
+
+### Install from a tag
+
+List the skills available at a release:
+
+```sh
+gh linked-skills install OWNER/REPO --tag TAG
+```
+
+Install one skill by the displayed name or path, or install all discovered
+skills:
+
+```sh
+gh linked-skills install OWNER/REPO SKILL --tag TAG
+gh linked-skills install OWNER/REPO --all --tag TAG
+```
+
+To move an existing tag-backed skill to a new tag, name that skill or its exact
+source path. The command stops if local changes would be overwritten.
+
+```sh
+gh linked-skills install OWNER/REPO SKILL --tag NEW_TAG
+```
+
+Tag upgrades are intentionally one skill at a time; `--all` does not re-pin
+already installed skills.
+
+### Install from a branch
+
+List the available skills, then install one:
+
+```sh
+gh linked-skills install OWNER/REPO --branch BRANCH
+gh linked-skills install OWNER/REPO SKILL --branch BRANCH
+```
+
+Use `--all` to install every discovered skill from the same branch revision:
+
+```sh
+gh linked-skills install OWNER/REPO --all --branch BRANCH
+```
+
+## 3. Review and commit the result
+
+An install creates or updates:
+
+```text
+.agents/skills/<skill>/...
+.gh-linked-skills.json
+```
+
+Review both, then commit them to the parent project so collaborators receive
+the skill content and its source record together.
+
+```sh
+git diff -- .agents/skills .gh-linked-skills.json
+git add .agents/skills .gh-linked-skills.json
+git commit -m "chore: install agent skills"
+gh linked-skills status
+```
+
+`STATE` describes the direction of the difference:
+
+| State | Meaning | Typical next step |
+| --- | --- | --- |
+| `clean` | Local and source content match | None |
+| `pull` | The source changed | `pull` |
+| `push` | The local skill changed | Review, then `push` |
+| `conflict` | Both sides changed or markers remain | Resolve the conflict |
+
+The `PULL` and `PUSH` columns separately show whether each operation is
+eligible and, when it is not, the reason.
+
+## Collaborate on a branch
+
+Bring source changes into a managed skill:
+
+```sh
+gh linked-skills pull SKILL
+```
+
+If both sides changed, the command performs a three-way merge. Text conflicts
+are written as Git-style markers for you to resolve; binary or structural
+conflicts stop without changing the affected file.
+
+After editing and reviewing a branch-backed skill, send it to the source:
+
+```sh
+gh linked-skills status
+gh linked-skills push SKILL
+```
+
+Push uses a normal Git commit, never a force push. It stops if the remote skill
+changed since the last synchronization, so you can pull and review first. The
+extension does not commit or push the parent project.
+
+## Publish a new local skill
+
+Create `.agents/skills/<name>/SKILL.md`, then publish it to an existing GitHub
+repository where you have push access:
+
+```sh
+gh linked-skills publish OWNER/REPO SKILL --branch BRANCH
+git add .gh-linked-skills.json
+git commit -m "chore: track published skill"
+```
+
+The remote path is `skills/<name>`. Existing different content is not
+overwritten, and the extension does not create the repository for you.
+
+## Uninstall a skill
+
+```sh
+gh linked-skills uninstall SKILL
+```
+
+Uninstall removes the local skill and its manifest entry without changing the
+source repository. It refuses to delete local changes. Use `--force` only after
+you have reviewed and intentionally decided to discard those changes.
+
+## Get help
+
+- Run `gh linked-skills <command> --help` for every option and example.
+- Use [GitHub Issues](https://github.com/game-dev-rta-club/gh-linked-skills/issues)
+  for reproducible bugs or proposed improvements.
+- Read the [security policy](../SECURITY.md) before reporting a vulnerability.

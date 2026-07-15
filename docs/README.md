@@ -1,15 +1,27 @@
----
-title: Linked Skills documentation
-updated: 2026-07-13
-status: implemented
----
+# gh-linked-skills documentation
 
-# Linked Skills docs
+Choose the page that matches what you want to do.
 
-GitHub上のagent skillを現在のprojectへ入れ、pull/pushするtoolの文書。
+## Use the extension
 
-1. [[docs/spec/1_Idea/index|Idea]]: なぜ作るか
-2. [[docs/spec/2_HowToUse/index|HowToUse]]: 使い方
-3. [[docs/spec/3_Functions/index|Functions]]: 内部仕様
+- [Install and synchronize Agent Skills](user-guide.md)
+- [Verify checksums and build provenance](release-verification.md)
+- Run `gh linked-skills <command> --help` for the canonical CLI syntax and
+  examples shipped with your installed version
 
-初回: [[docs/spec/2_HowToUse/pages/install-extension|Linked SkillsのInstall]]
+## Evaluate safety and operation
+
+- [Safety model](spec/3_Functions/pages/architecture/safety-model.md)
+- [Synchronization model](spec/3_Functions/pages/architecture/synchronization-model.md)
+- [Source references](spec/3_Functions/pages/architecture/source-reference.md)
+- [Development and testing](spec/3_Functions/pages/quality/development-and-testing.md)
+
+## Contribute
+
+- [Contributor guide](../CONTRIBUTING.md)
+- [Security policy](../SECURITY.md)
+- [Detailed implementation specifications](spec/3_Functions/index.md)
+
+The detailed specifications record the original implementation decisions and
+are currently written in Japanese. The user guide and CLI help are the English
+entry points for using the extension.
