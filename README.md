@@ -14,8 +14,8 @@ same setup.
 
 ## Quick start
 
-Requirements: macOS or Linux, [GitHub CLI](https://cli.github.com/), system Git,
-and a Git project.
+Requirements: macOS or Linux, an authenticated
+[GitHub CLI](https://cli.github.com/), system Git, and a Git project.
 
 ```sh
 gh extension install game-dev-rta-club/gh-linked-skills
