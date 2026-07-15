@@ -39,6 +39,33 @@ Upgrade an existing installation with:
 gh extension upgrade game-dev-rta-club/gh-linked-skills
 ```
 
+## Verify a release
+
+Use v0.5.3 or later. Earlier releases remain available only as historical
+records. Releases from v0.5.3 onward are immutable and include SHA-256
+checksums and signed GitHub build provenance.
+
+Download a release into an empty directory:
+
+```sh
+version=v0.5.3
+gh release download "$version" --repo game-dev-rta-club/gh-linked-skills
+```
+
+Verify the checksums with `sha256sum -c SHA256SUMS` on Linux or
+`shasum -a 256 -c SHA256SUMS` on macOS. Then verify that every asset came from
+the release workflow, tag, and a GitHub-hosted runner:
+
+```sh
+for asset in SHA256SUMS gh-linked-skills_"$version"_*; do
+  gh attestation verify "$asset" \
+    --repo game-dev-rta-club/gh-linked-skills \
+    --signer-workflow game-dev-rta-club/gh-linked-skills/.github/workflows/release.yml \
+    --source-ref "refs/tags/$version" \
+    --deny-self-hosted-runners
+done
+```
+
 ## Quick start
 
 Run the extension inside an existing Git project. This example installs the
