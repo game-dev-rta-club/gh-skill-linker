@@ -7,6 +7,7 @@ import (
 	"path/filepath"
 	"sort"
 	"strings"
+	"sync"
 
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/manifest"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/proposal"
@@ -328,12 +329,25 @@ func (s *Service) readProposals(ctx context.Context, skills []preparedSkill) map
 	}
 	sort.Strings(keys)
 	results := make(map[string]proposalReadResult, len(keys))
+	var mutex sync.Mutex
+	var wait sync.WaitGroup
+	limit := make(chan struct{}, 8)
 	for _, key := range keys {
-		pulls, err := s.remote.ListPullRequests(
-			ctx, repositories[key], proposal.ListOptions{State: "open"},
-		)
-		results[key] = proposalReadResult{pulls: pulls, err: err}
+		key := key
+		wait.Add(1)
+		go func() {
+			defer wait.Done()
+			limit <- struct{}{}
+			defer func() { <-limit }()
+			pulls, err := s.remote.ListPullRequests(
+				ctx, repositories[key], proposal.ListOptions{State: "open"},
+			)
+			mutex.Lock()
+			results[key] = proposalReadResult{pulls: pulls, err: err}
+			mutex.Unlock()
+		}()
 	}
+	wait.Wait()
 	return results
 }
 

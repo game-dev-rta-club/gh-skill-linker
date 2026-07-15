@@ -96,12 +96,8 @@ func NewService(
 	remote Remote,
 	inventory Inventory,
 	publisher Publisher,
-	proposalManagers ...ProposalManager,
+	proposals ProposalManager,
 ) *Service {
-	var proposals ProposalManager
-	if len(proposalManagers) > 0 {
-		proposals = proposalManagers[0]
-	}
 	return &Service{
 		registry: registry, local: local, remote: remote,
 		inventory: inventory, publisher: publisher, proposals: proposals,
@@ -196,16 +192,14 @@ func (s *Service) publish(
 			ctx, projectRoot, repositoryInput, repositoryURL, name, relativePath, sourcePath, ref, document, snapshot,
 		)
 	}
-	if s.proposals != nil {
-		active, activeErr := s.proposals.FindActive(ctx, repository, ref.Name, name, sourcePath)
-		if activeErr != nil {
-			return Result{}, fmt.Errorf("publish eligibility unknown: proposal_unknown: %w", activeErr)
-		}
-		if active != nil {
-			return Result{}, fmt.Errorf(
-				"publish ineligible: open_proposal: close or merge %s, or rerun with --pr", active.URL,
-			)
-		}
+	active, activeErr := s.proposals.FindActive(ctx, repository, ref.Name, name, sourcePath)
+	if activeErr != nil {
+		return Result{}, fmt.Errorf("publish eligibility unknown: proposal_unknown: %w", activeErr)
+	}
+	if active != nil {
+		return Result{}, fmt.Errorf(
+			"publish ineligible: open_proposal: close or merge %s, or rerun with --pr", active.URL,
+		)
 	}
 
 	pushResult, err := s.publisher.PublishSkill(
@@ -236,14 +230,10 @@ func (s *Service) propose(
 	document manifest.Document,
 	snapshot source.SkillSnapshot,
 ) (Result, error) {
-	if s.proposals == nil {
-		return Result{}, fmt.Errorf("publish proposal dependencies are not configured")
-	}
 	repository, reason := source.ParseRepository(repositoryURL)
 	if reason != "" {
 		return Result{}, fmt.Errorf("invalid repository: %s", reason)
 	}
-	baseTreeSHA := ""
 	current, err := s.remote.ReadSkill(ctx, repository, sourcePath, ref.FullName)
 	if err == nil {
 		if current.Exact(snapshot) {
@@ -258,24 +248,17 @@ func (s *Service) propose(
 		if merged != nil {
 			return s.link(projectRoot, repositoryInput, name, relativePath, sourcePath, ref, document, current)
 		}
-		active, activeErr := s.proposals.FindActive(ctx, repository, ref.Name, name, sourcePath)
-		if activeErr != nil {
-			return Result{}, fmt.Errorf("inspect active proposal: %w", activeErr)
-		}
-		if active == nil {
-			return Result{}, fmt.Errorf(
-				"publish ineligible: remote_skill_exists: %s:%s already contains different content",
-				repositoryInput, sourcePath,
-			)
-		}
-		baseTreeSHA = current.TreeSHA
+		return Result{}, fmt.Errorf(
+			"publish ineligible: remote_skill_exists: %s:%s already contains different content",
+			repositoryInput, sourcePath,
+		)
 	} else if !errors.Is(err, source.ErrSkillNotFound) {
 		return Result{}, fmt.Errorf("read publish target: %w", err)
 	}
 
 	proposed, err := s.proposals.Propose(ctx, proposal.Request{
 		Repository: repository, RepositoryURL: repositoryURL, BaseBranch: ref.Name,
-		SkillName: name, SourcePath: sourcePath, BaseTreeSHA: baseTreeSHA,
+		SkillName: name, SourcePath: sourcePath,
 		Snapshot: snapshot, Title: "feat(skill): publish " + name,
 		Message: "feat(skill): publish " + name,
 	})

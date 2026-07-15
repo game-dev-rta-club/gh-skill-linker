@@ -54,7 +54,7 @@ identical remote subtree and retry only manifest registration.
 For a missing path, create or update a proposal and leave the manifest
 unchanged. After merge, rerun publish and register the current source revision.
 If local content advanced, keep it unchanged while registering the merged
-baseline. Reject different existing content unless a matching active or merged
-managed proposal proves ownership of the path.
+baseline. Reject different existing content unless a matching merged managed
+proposal proves ownership of the path.
 
 Common branch and recovery rules: [Pull request proposals](proposals.md).

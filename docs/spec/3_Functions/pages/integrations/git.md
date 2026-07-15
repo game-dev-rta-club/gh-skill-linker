@@ -36,7 +36,7 @@ Other Git operations:
 - push: shallow clone, scoped add, and normal push
 - publish: inspect refs; shallow-clone an existing branch or initialize the
   requested branch in an empty repository, then scoped add and normal push
-- proposal: shallow-clone base or head, replace only the skill subtree, and
+- proposal: clone base or head, replace only the skill subtree, and
   normal-push a generated branch; when base advanced, create a normal merge
   commit after rejecting conflicts outside that subtree
 
