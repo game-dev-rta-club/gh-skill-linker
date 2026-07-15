@@ -1,34 +1,43 @@
 ---
 title: Git integration specification
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
 # Git
 
-Parent projectのinventory取得と、source repositoryの一時操作にsystem Gitを使う。
+The extension uses system Git to inspect the parent project and to perform
+temporary operations on source repositories.
 
 ## GIT-001 Project inventory
 
-Rootは`git rev-parse --show-toplevel`。worktree外は失敗する。
+The root comes from `git rev-parse --show-toplevel`. Running outside a worktree
+fails.
 
 - pull: `git ls-files --cached -- .agents/skills`
 - push: `git ls-files --cached --others --exclude-standard -- .agents/skills`
 
-Statusでは上記を各1回だけ実行し、全managed skillの判定に再利用する。
+Status runs each command once and reuses the results for every managed skill.
 
-Tracked fileはignore規則にかかわらずpush対象。Untracked non-ignoredもpushできる。Untrackedかつignoredのfileだけpush不可。
+Tracked files are eligible for push regardless of ignore rules. Untracked,
+non-ignored files are also eligible. Only files that are both untracked and
+ignored prevent a push.
 
-Parentのclean/staged/manifest状態は検査しない。Parentでadd/commit/stashしない。
+The extension does not inspect the parent project's clean, staged, or manifest
+state. It does not add, commit, or stash in the parent project.
 
-その他:
+Other Git operations:
 
-- install/pull/pushのlow-level ref fallback: `git ls-remote --exit-code`
+- low-level install/pull/push ref fallback: `git ls-remote --exit-code`
 - merge: `git merge-file --diff3`
-- push commandのpermission: repository APIがpush不可を返した場合だけ、shallow clone + `git push --dry-run`
-- push: shallow clone + scoped add + normal push
-- publish: ref一覧を確認し、既存branchはshallow clone、refなしrepositoryは指定branchを初期化。Scoped add + normal push
+- push permission: only when the repository API reports no push permission,
+  use a shallow clone and `git push --dry-run`
+- push: shallow clone, scoped add, and normal push
+- publish: inspect refs; shallow-clone an existing branch or initialize the
+  requested branch in an empty repository, then scoped add and normal push
 
-Statusのref/permission確認はGitHub GraphQL APIだけを使い、cloneしない。
+Status checks refs and permissions only through the GitHub GraphQL API and does
+not clone.
 
-Branchはpush/publish直前に[`git check-ref-format --branch`](https://git-scm.com/docs/git-check-ref-format)でも検証する。
+Immediately before push or publish, the extension also validates the branch
+with [`git check-ref-format --branch`](https://git-scm.com/docs/git-check-ref-format).

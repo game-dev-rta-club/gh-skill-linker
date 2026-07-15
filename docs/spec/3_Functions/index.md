@@ -1,20 +1,23 @@
 ---
 title: Linked Skills functions
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Functions
 
-HowToUseのbehaviorを支える内部実装とfailure境界を記録する。利用だけなら読む必要はない。
+This section records the implementation and failure boundaries behind the
+user-visible behavior. You do not need it for normal use.
 
-最初にArchitectureとSynchronizationを読み、必要なoperationへ進む。
+Start with Architecture and Synchronization, then continue to the operation you
+need.
 
-- [[docs/spec/3_Functions/pages/architecture/index|Architecture]]
-- [[docs/spec/3_Functions/pages/cli/index|CLI]]
-- [[docs/spec/3_Functions/pages/operations/index|Operations]]
-- [[docs/spec/3_Functions/pages/storage/index|Storage]]
-- [[docs/spec/3_Functions/pages/integrations/index|Integrations]]
-- [[docs/spec/3_Functions/pages/quality/index|Quality]]
+- [Architecture](pages/architecture/index.md)
+- [CLI](pages/cli/index.md)
+- [Operations](pages/operations/index.md)
+- [Storage](pages/storage/index.md)
+- [Integrations](pages/integrations/index.md)
+- [Quality](pages/quality/index.md)
 
-`*-NNN`は実装済みbehavior。公開interfaceは[[docs/spec/2_HowToUse/index|HowToUse]]を正本とする。
+Identifiers such as `*-NNN` describe implemented behavior. The public
+interface is defined by [How to use](../2_HowToUse/index.md).

@@ -1,39 +1,42 @@
 ---
 title: Architecture overview
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Architecture
 
-CLIがoperation serviceを呼び、domainと外部adapterを分離する。
+The CLI calls operation services while keeping domain logic separate from
+external adapters.
 
 ## TECH-001 Runtime and build dependencies
 
-- Go `1.25.0`
+- Go `1.26.5`
 - `github.com/cli/go-gh/v2 v2.13.0`
 - `gopkg.in/yaml.v3 v3.0.1`
-- runtime: `gh`、Git、GitHub.com network
+- runtime: `gh`, Git, and network access to GitHub.com
 
-Node.js、Python、shell interpreterは不要。
+Node.js, Python, and a shell interpreter are not required.
 
 ```text
 main / cli
-  → install / status / pull / push
-    → source / skill / syncstate / merge
-    → manifest / workspace / githubapi / gitcli / command
+  -> install / status / pull / push
+    -> source / skill / syncstate / merge
+    -> manifest / workspace / githubapi / gitcli / command
 ```
 
-Operationはinterface経由でadapterを使う。testではfakeへ置換する。
+Operations use adapters through interfaces. Tests replace those adapters with
+fakes.
 
-`status`、`pull`、`push`はmanifestを読み、source/baseline/localを比較する。`install`はsource snapshotを初期baselineとして登録する。
+`status`, `pull`, and `push` read the manifest and compare source, baseline, and
+local state. `install` registers the source snapshot as the initial baseline.
 
-同期commandの変更対象は選択したskillだけ。
+Each synchronization command changes only the selected skill.
 
-固定値:
+Fixed boundaries:
 
 - host: GitHub.com
 - workspace: current Git worktree
 - destination: `.agents/skills/<name>`
-- source: repository + path + full Git ref
-- parent commit: application外
+- source: repository, path, and full Git ref
+- parent-project commits: outside the application

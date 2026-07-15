@@ -1,53 +1,60 @@
 ---
 title: Source reference
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Source reference
 
-Branchとtagをfull Git refで保持する。
+Branches and tags are stored as full Git refs.
 
 | Kind | Full ref | Pull | Push |
 | --- | --- | --- | --- |
-| branch | `refs/heads/<name>` | yes | 権限があればyes |
+| branch | `refs/heads/<name>` | yes | yes, with permission |
 | tag | `refs/tags/<name>` | no | no |
 
-Installは`--branch`または`--tag`を1つだけ受け取る。Commit SHA直接指定は扱わない。
+Install accepts exactly one of `--branch` and `--tag`. Direct commit-SHA
+selection is not supported.
 
 ## Resolution
 
-1. GitHub Git refs APIでexact refを取得
-2. annotated tagをGit tags APIで最終objectまでpeel
-3. 最終objectがcommitでなければ拒否
-4. 同じcommitからdiscoveryとsnapshotを取得
+1. Read the exact ref through the GitHub Git refs API.
+2. Peel an annotated tag through the Git tags API to its final object.
+3. Reject a final object that is not a commit.
+4. Read discovery results and snapshots from that same commit.
 
-保持するSHA:
+Stored SHAs:
 
-- `refSHA`: branch/lightweight tagのcommit、またはannotated tag object
-- `commitSHA`: peel後のcommit
+- `refSHA`: branch or lightweight-tag commit, or annotated-tag object
+- `commitSHA`: commit after peeling
 - `treeSHA`: skill subtree
 
-Tagの`refSHA`が変化した場合は、contentが同じでも`tag_moved`。自動適用しない。
+If a tag's `refSHA` changes, status reports `tag_moved` even when content is
+identical. The extension never accepts that change automatically.
 
 ## Operation rules
 
-- install: refを一度解決し、同じcommitから全snapshotを取得
-- status: tagのlocal/base/currentとref identityを確認
-- pull: tagならremote read前に`fixed_source_ref`
-- push: tagならpermission確認前に`source_ref_read_only`
-- repin: 同じsourceのtagを`install`で再指定。local clean時だけ更新
+- install: resolve the ref once and read every snapshot from the same commit
+- status: inspect tag local, baseline, current, and ref identity
+- pull: reject a tag with `fixed_source_ref` before reading remote content
+- push: reject a tag with `source_ref_read_only` before checking permission
+- re-pin: select another tag for the same source through `install`; update only
+  when local content is clean
 
-Repinは取得と検証を終えてからskillを置換し、manifestをatomic writeする。失敗時は元のskillへ戻す。Process停止による不一致は`status`で検出する。
+Re-pin completes retrieval and validation before replacing the skill, then
+writes the manifest atomically. On failure, it restores the original skill.
+`status` detects an inconsistency caused by process termination.
 
 ## Compatibility
 
-Schema v1の`branch`は読取時に`refs/heads/<branch>`へ変換し、`refSHA=commitSHA`とする。Read-only commandではfileを書き換えない。次の成功したmanifest変更でv2を保存する。
+On read, schema v1 `branch` becomes `refs/heads/<branch>` with
+`refSHA=commitSHA`. Read-only commands do not rewrite the file. The next
+successful manifest mutation saves schema v2.
 
-対象外:
+Not supported:
 
-- `latest`やsemver range
-- branch/tagの自動選択と相互切り替え
-- default branch fallback
-- commit SHA指定
-- tag作成、移動、削除、push
+- `latest` or semantic-version ranges
+- automatic branch/tag selection or switching
+- default-branch fallback
+- commit-SHA selection
+- tag creation, movement, deletion, or push

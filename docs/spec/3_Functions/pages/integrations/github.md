@@ -1,49 +1,78 @@
 ---
 title: GitHub integration specification
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
 # GitHub
 
-Source snapshot取得、publish、push権限判定をGitHub.comへ限定する。Repository作成は扱わない。
+Source reads, publication, and push-permission checks are limited to GitHub.com.
+The extension does not create repositories.
 
 ## GITHUB-001 Authentication and host
 
-Hostは`github.com`固定。`go-gh`でtokenを取得する。保存済み認証に加え、`GH_TOKEN`など`gh`互換の環境変数を利用できる。APIへ`Cache-Control: no-cache`を付ける。
+The host is fixed to `github.com`. The extension reads a token through `go-gh`,
+including credentials saved by `gh auth login` and compatible environment
+variables such as `GH_TOKEN`. API requests include `Cache-Control: no-cache`.
 
-Git pushはtokenをBasic auth extra headerで渡す。traceを無効化し、token/Authorizationを`[REDACTED]`へ置換する。configへ保存しない。
+Git push receives the token through a Basic-auth extra header. Tracing is
+disabled, and token or Authorization values become `[REDACTED]`. Credentials
+are never written to Git configuration.
 
-User environmentとglobal/system Git configは継承する。専用HOME、config隔離、timeout、retryはない。
+User environment and global/system Git configuration are inherited. There is
+no dedicated home directory, configuration isolation, timeout, or retry.
 
-## GITHUB-002 Ref, discovery, tree, blob reads
+## GITHUB-002 Ref, discovery, tree, and blob reads
 
-Install/pull/pushのsource refはGit refs APIで解決する。Annotated tagはGit tags APIでcommitまでpeelする。Tag object SHAとcommit SHAを分けて返し、commit以外を指すrefは拒否する。
+Install, pull, and push resolve source refs through the Git refs API. Annotated
+tags are peeled to commits through the Git tags API. Tag object SHA and commit
+SHA remain separate, and a ref that does not resolve to a commit is rejected.
 
-Trees API `recursive=1`とBlobs APIでsubtreeを読む。
+Subtrees are read through Trees API `recursive=1` and the Blobs API.
 
-Discoveryはsource refを1回だけcommit SHAへ解決し、repository treeを1回読む。候補path、namespace、skill tree SHAを返す。`--all`とname選択は同じ結果を使う。
+Discovery resolves the source ref to a commit once and reads the repository
+tree once. It returns candidate paths, namespaces, and skill tree SHAs. `--all`
+and name selection reuse that result.
 
-拒否: path/SKILL.md不存在、不正frontmatter、truncated tree、unsupported mode/type/encoding。
+The extension rejects a missing path or `SKILL.md`, invalid frontmatter,
+truncated trees, and unsupported modes, types, or encodings.
 
-Install/pull/pushのsnapshotはtreeとblobを読む。Statusは全source refとrepository permissionをGraphQLでまとめて読む。1 requestは最大32 refとし、超過分だけ分割する。Owner、repository、refはGraphQL variableで渡す。
+Install, pull, and push read snapshots through tree and blob requests. Status
+batches source refs and repository permissions through GraphQL, with at most 32
+refs per request. Larger inputs are divided across requests. Owner, repository,
+and ref values are GraphQL variables.
 
-Statusはcommit SHAがbaselineと異なるrepositoryだけtreeを読む。Tree SHAが変わったskillだけsnapshotを読み、nameを検証する。
+Status reads trees only for repositories whose source commit SHA differs from
+the baseline. It reads and validates a snapshot only when a skill tree SHA
+changed.
 
-GraphQLの一部だけ失敗した場合、error pathに対応するrefまたはpermissionだけをunknownにする。HTTP、decodeなどrequest全体の失敗は、そのrequestに含まれる項目をunknownにする。
+If part of a GraphQL response fails, only the ref or permission associated with
+the error path becomes unknown. An HTTP, decoding, or other whole-request
+failure marks every item in that request unknown.
 
-Statusのtree responseは1 process内だけ共有する。Discovery treeがtruncatedの場合は一覧/name/`--all`を拒否する。Statusもtruncated treeを判定不能として拒否する。Exact path installは全体discoveryを使わない。
+Tree responses are shared only within one status process. A truncated discovery
+tree rejects listing, name selection, and `--all`. Status also treats a
+truncated tree as unknown. Exact-path install does not use full-repository
+discovery.
 
-永続cache、pagination、size limit、timeout、retryはない。
+There is no persistent cache, pagination, size limit, timeout, or retry.
 
-GitHub APIの上限は適用される。Recursive treeは100,000 entryまたは7 MBまでで、`truncated=true`を拒否する。Blobは1件100 MBまで。詳細: [Trees API](https://docs.github.com/en/rest/git/trees) / [Blobs API](https://docs.github.com/en/rest/git/blobs)
+GitHub API limits still apply. Recursive trees are limited to 100,000 entries
+or 7 MB, and `truncated=true` is rejected. Each blob is limited to 100 MB. See
+the [Trees API](https://docs.github.com/en/rest/git/trees) and
+[Blobs API](https://docs.github.com/en/rest/git/blobs).
 
 ## GITHUB-003 Push permission
 
-StatusはGraphQLの`viewerPermission`をrepository単位で読む。`ADMIN`、`MAINTAIN`、`WRITE`は許可、`READ`、`TRIAGE`はread-only、取得失敗はpermission unknown。Statusではcloneしない。
+Status reads GraphQL `viewerPermission` once per repository. `ADMIN`,
+`MAINTAIN`, and `WRITE` are writable; `READ` and `TRIAGE` are read-only; a read
+failure produces unknown permission. Status does not clone.
 
-Push実行前はfalseの場合にshallow clone + `git push --dry-run`で再確認する。
+Before a push, a false API result is rechecked through a shallow clone and
+`git push --dry-run`.
 
-Known denialはread-only。network/clone/unknown failureはpermission unknown。
+A known denial is read-only. A network, clone, or unknown failure produces
+unknown permission.
 
-この判定はbranch protectionやrulesetを完全には表さない。最終的なpushはGitHubに拒否され得る。
+This check cannot fully represent branch protection and rulesets. GitHub may
+still reject the final push.
