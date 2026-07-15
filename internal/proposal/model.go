@@ -40,6 +40,32 @@ const (
 	Unknown       State = "unknown"
 )
 
+type PullRequest struct {
+	Number         int
+	URL            string
+	State          string
+	Body           string
+	Merged         bool
+	HeadRef        string
+	HeadSHA        string
+	HeadRepository string
+	BaseRef        string
+	BaseRepository string
+}
+
+type ListOptions struct {
+	State string
+	Base  string
+	Head  string
+}
+
+type CreateRequest struct {
+	Title string
+	Head  string
+	Base  string
+	Body  string
+}
+
 func SetMetadata(body string, metadata Metadata) (string, error) {
 	if err := metadata.Validate(); err != nil {
 		return "", err
