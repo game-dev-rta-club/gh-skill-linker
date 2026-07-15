@@ -1,29 +1,32 @@
 ---
 title: Conflict merge reference
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Conflict merge
 
-Base/local/remoteをfile単位でmergeする。手動手順は[[docs/spec/2_HowToUse/pages/resolve-conflicts|HowTo]]を参照する。
+Merge base, local, and remote content one file at a time. See
+[Resolving conflicts](../../../2_HowToUse/pages/resolve-conflicts.md) for the
+manual workflow.
 
 ## MERGE-001 Per-file three-way merge
 
-Path unionをsortし、存在/raw byte/実行bitをmergeする。
+Sort the union of paths, then merge existence, raw bytes, and executable bits.
 
-- 片側追加: 採用
-- 両側同byte: 採用しmode merge
-- 片側だけbase同一: 反対側を採用
-- content変更 + 反対側mode変更: 両方採用
-- 両側削除: 削除
-- delete + 反対側変更: modify/delete error
+- added on one side: accept the addition
+- same bytes on both sides: accept content and merge the mode
+- one side equals base: accept the other side
+- content changed on one side and mode changed on the other: accept both
+- deleted on both sides: delete
+- deleted on one side and changed on the other: modify/delete error
 
-`SKILL.md`消失とfile/directory collisionはerror。
+A missing `SKILL.md` or file/directory collision is an error.
 
 ## MERGE-002 Text and binary
 
-両側変更でNULありならbinary error。Workspaceは変更しない。textは次を使う。
+When both sides changed and either contains a NUL byte, return a binary error
+without changing the workspace. Merge text with:
 
 ```bash
 git merge-file --diff3 \
@@ -32,24 +35,29 @@ git merge-file --diff3 \
   -L gh-linked-skills:remote:<remote-tree-sha>
 ```
 
-Overlapは個数にかかわらずmarkerを残す。Frontmatterも同じ。Inputはtemporary file `0600`。encoding/newline変換とapplication独自のsize limitはない。
+Any overlap leaves conflict markers, including frontmatter overlaps. Input uses
+temporary files with mode `0600`. The application does not transform encoding
+or newlines and does not impose its own size limit.
 
-`git merge-file`の終了値1〜127は競合数として扱う。詳細: [git-merge-file](https://git-scm.com/docs/git-merge-file)
+Exit values from 1 through 127 from `git merge-file` are treated as a conflict
+count. See [git-merge-file](https://git-scm.com/docs/git-merge-file).
 
 ## MERGE-003 Executable mode
 
-- local=base: remote
-- remote=base: local
-- 両側変更: OR
+- local equals base: remote mode
+- remote equals base: local mode
+- both changed: logical OR
 
-Mode変更 + deleteはerror。
+A mode change combined with deletion is an error.
 
 ## MERGE-004 Manual resolution state
 
-次のsubstringでunresolved判定する。
+These substrings identify an unresolved conflict:
 
 - `<<<<<<< gh-linked-skills:local`
 - `||||||| gh-linked-skills:base:`
 - `>>>>>>> gh-linked-skills:remote:`
 
-Marker中はstate=`conflict`、pull/push=`unresolved_conflict`。別state fileはない。解消後、remoteと異なれば`push`。
+While markers remain, state is `conflict` and pull/push reason is
+`unresolved_conflict`. There is no separate state file. After resolution,
+content that differs from remote produces `push`.

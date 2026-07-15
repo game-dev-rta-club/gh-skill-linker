@@ -1,14 +1,14 @@
 ---
 title: Architecture index
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Architecture
 
-全体構造、同期model、安全性。
+Read about the overall structure, synchronization model, and safety boundaries.
 
-- [[docs/spec/3_Functions/pages/architecture/overview|Overview]]
-- [[docs/spec/3_Functions/pages/architecture/synchronization-model|Synchronization]]
-- [[docs/spec/3_Functions/pages/architecture/safety-model|Safety]]
-- [[docs/spec/3_Functions/pages/architecture/source-reference|Source reference]]
+- [Overview](overview.md)
+- [Synchronization](synchronization-model.md)
+- [Safety](safety-model.md)
+- [Source references](source-reference.md)

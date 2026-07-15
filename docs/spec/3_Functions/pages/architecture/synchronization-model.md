@@ -1,27 +1,32 @@
 ---
 title: Synchronization model
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
 # Synchronization
 
-Managed skillはsource、local、baselineの3つを比較する。
+A managed skill compares three snapshots: source, local, and baseline.
 
 ```text
 source current
       ↓
-baseline ← manifest
+baseline <- manifest
       ↑
 local skill
 ```
 
-- current: repository/path/source refのsnapshot
-- local: `.agents/skills/<name>`のsnapshot
-- baseline: 最終同期commit/tree SHA
+- current: snapshot at the repository, path, and source ref
+- local: snapshot at `.agents/skills/<name>`
+- baseline: commit and tree SHA from the last synchronization
 
-Statusはlocal snapshotからGit tree SHAを計算し、baseline tree SHAと比較する。Source refのcommit SHAがbaselineと同じならcurrentも同一とする。異なる場合だけsourceのskill tree SHAを読む。Local/current両方の差分から`clean`、`push`、`pull`、`conflict`を算出する。
+Status calculates a Git tree SHA from the local snapshot and compares it with
+the baseline tree SHA. If the source-ref commit SHA equals the baseline, current
+is also unchanged. Otherwise, status reads the source skill tree SHA. Local and
+current differences produce `clean`, `push`, `pull`, or `conflict`.
 
-snapshotはrelative path、raw byte、実行可否の組。YAML意味とtimestampは比較しない。
+A snapshot contains relative paths, raw bytes, and executable state. YAML
+meaning and timestamps are not compared.
 
-Pullは3-way mergeのため、baseline snapshotをtree SHAから取得する。Statusはbaseline snapshotを取得しない。
+Pull retrieves the baseline snapshot by tree SHA for a three-way merge. Status
+does not retrieve the baseline snapshot.

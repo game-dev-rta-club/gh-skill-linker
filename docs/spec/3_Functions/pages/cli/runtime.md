@@ -1,46 +1,60 @@
 ---
 title: CLI runtime specification
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
 # CLI runtime
 
-公開構文と出力は[[docs/spec/2_HowToUse/pages/command-reference|Command reference]]、ここではdispatchとpreflightを扱う。
+The [command reference](../../../2_HowToUse/pages/command-reference.md) owns
+public syntax and output. This page covers dispatch and preflight behavior.
 
 ## CLI-001 Dispatch and parsing
 
-Commands: `install`、`publish`、`status`、`pull`、`push`。
+Commands: `install`, `publish`, `status`, `pull`, `push`, and `uninstall`.
 
 - install: `OWNER/REPO [SKILL|PATH | --all] (--branch BRANCH | --tag TAG) [--accept-moved-tag]`
 - publish: `OWNER/REPO SKILL --branch BRANCH`
-- status: flagなし、または`--json`だけ
-- pull/push: selector 1件
+- status: no flag, or `--json` only
+- pull/push: exactly one selector
+- uninstall: exactly one selector, with optional `--force`
 
-Install/publishのrepositoryは`OWNER/REPO`形式をCLI境界で検証する。Repositoryなし、`.git` suffix、3 segment以上はusage error。2 segmentの値は常にGitHub repositoryとして扱う。Installのselectorなしはdiscoveryだけを行う。
+The CLI validates install and publish repositories as `OWNER/REPO`. A missing
+repository, `.git` suffix, or more than two segments is a usage error. Every
+two-segment value is treated as a GitHub repository. Install without a selector
+performs discovery only.
 
-Helpは`--help`、`-h`、`help [command]`。Command引数内のhelp flagは位置を問わずhelpを優先する。Helpとmalformed argumentはdependencyを作らない。公開表示は[[docs/spec/2_HowToUse/pages/command-reference|Command reference]]を正本とする。
+Help forms are `--help`, `-h`, and `help [command]`. A help flag anywhere in a
+command takes precedence. Help and malformed arguments do not initialize
+dependencies. The [command reference](../../../2_HowToUse/pages/command-reference.md)
+owns public help text.
 
-その他のshort flag、`--flag=value`、`--`は非対応。
+Other short flags, `--flag=value`, and `--` are not supported.
 
 ## CLI-002 Exit mapping
 
-success=`0`、operation failure=`1`、usage=`2`。marker適用済みpullも`1`。
+Success is `0`, operation failure is `1`, and usage error is `2`. A pull that
+writes conflict markers also exits with `1`.
 
 ## CLI-003 Preflight implementation
 
 1. `auth.TokenForHost("github.com")`
-2. `gh --version`の終了成功。出力はparseしない
+2. successful `gh --version`; output is not parsed
 3. `git rev-parse --show-toplevel`
 
-Argument検証後にpreflightを行う。Usage errorとhelpはtoken不足より先に返す。
+Preflight runs after argument validation. Usage errors and help take precedence
+over a missing token.
 
 ## CLI-004 Status rendering
 
-path順にsortし、table/JSONへ出す。JSONはHTML escape無効。state/reasonはstatus serviceが算出する。
+Sort by path and render a table or JSON. JSON disables HTML escaping. The status
+service calculates state and reason values.
 
 ## CLI-005 Mutation rendering
 
-Resultをsuccess/no-op messageへ変換する。Render failureはexit codeへ反映しない。
+Convert results to success or no-op messages. A rendering failure does not
+change the exit code.
 
-Conflict pullはstdoutを空にし、project-relative conflict pathを順に`CONFLICT (content)`としてstderrへ出す。続けて`status`と、`STATE=push`の場合だけ実行する`push`を案内し、exit `1`。
+A conflicting pull leaves stdout empty and writes sorted, project-relative
+paths to stderr as `CONFLICT (content)`. It then recommends `status` and, only
+for `STATE=push`, `push`, before exiting with `1`.

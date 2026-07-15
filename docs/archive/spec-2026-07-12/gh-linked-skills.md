@@ -1,7 +1,7 @@
 ---
 title: Linked Skills
-updated: 2026-07-12
-status: implemented
+updated: 2026-07-15
+status: archived
 tags:
   - gh-extension
   - linked-skills
@@ -10,23 +10,28 @@ tags:
 # Linked Skills
 
 > [!SUMMARY]
-> 複数projectで育てるskillを、sourceのbyteを変えずにinstallし、安全にpull / pushできるGitHub CLI extension。
+> A GitHub CLI extension that installs skills developed across projects without
+> changing source bytes, then pulls and pushes them safely.
 
 ## Value
 
-skillを「installして使う成果物」ではなく「複数projectから改善が戻る共有source」として扱う。利用者が覚える基本操作は`pull → 編集 → push`とし、remote更新、権限不足、競合をcommandが先に検出する。
+Treat a skill not only as an installed artifact, but as a shared source that
+receives improvements from multiple projects. The basic workflow is
+`pull -> edit -> push`; the command detects remote updates, missing permission,
+and conflicts first.
 
 ## Product boundary
 
-- extension本体は`gh extension`で配布する
-- GitHub.com、macOS、Linux、project scopeを正式対応する
-- managed skillは`.agents/skills/<name>`へ置く
-- source情報はproject rootの`.gh-linked-skills.json`へ置く
-- skill contentへtracking metadataを追加しない
-- Git transport、認証、mergeは`gh`、GitHub API、system Gitを使う
-- PR作成、force push、user scope、GHES、WindowsはMVP対象外とする
+- distribute the extension through `gh extension`
+- officially support GitHub.com, macOS, Linux, and project scope
+- place managed skills at `.agents/skills/<name>`
+- store source information in `.gh-linked-skills.json` at the project root
+- never add tracking metadata to skill content
+- use `gh`, GitHub APIs, and system Git for transport, authentication, and merge
+- exclude PR creation, force push, user scope, GHES, and Windows from the MVP
 
-既存skillや利用者dataのmigrationは実装しない。未リリース段階で管理済みskillが存在しないため、旧prototypeを直接置き換える。
+Do not migrate existing skills or user data. No managed skills exist before the
+unreleased prototype is replaced directly.
 
 ## User flow
 
@@ -40,13 +45,15 @@ gh linked-skills pull example
 gh linked-skills push example
 ```
 
-操作と状態は[[gh-linked-skills-functions|機能一覧]]、競合時の手順は[[gh-linked-skills-conflict-resolution|手動競合解決]]を参照する。
+See [Functions](gh-linked-skills-functions.md) for operations and states, and
+[Manual conflict resolution](gh-linked-skills-conflict-resolution.md) for the
+conflict workflow.
 
 ## Pages
 
-| Page | 内容 |
+| Page | Contents |
 | --- | --- |
-| [[gh-linked-skills-functions|機能一覧]] | command interface、状態、拒否条件 |
-| [[gh-linked-skills-implementation|実装方針]] | component、data、transaction、test |
-| [[gh-linked-skills-distribution|配布と対応範囲]] | extensionとworkflow skillのinstall |
-| [[gh-linked-skills-conflict-resolution|手動競合解決]] | markerを使う解決flow |
+| [Functions](gh-linked-skills-functions.md) | command interface, states, rejection rules |
+| [Implementation](gh-linked-skills-implementation.md) | components, data, transactions, tests |
+| [Distribution and support](gh-linked-skills-distribution.md) | extension and workflow-skill installation |
+| [Manual conflict resolution](gh-linked-skills-conflict-resolution.md) | marker-based resolution workflow |

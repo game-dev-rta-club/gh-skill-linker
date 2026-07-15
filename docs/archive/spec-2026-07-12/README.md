@@ -4,10 +4,13 @@ archived: 2026-07-12
 status: archived
 ---
 
-# Spec archive 2026-07-12
+# Specification archive 2026-07-12
 
-このdirectoryは、as-built specへ再編する直前の仕様書snapshotである。本文はarchive時点から変更していない。
+This directory contains the specification snapshot immediately before the
+as-built documentation was reorganized. The content was translated into English
+on 2026-07-15, but its historical behavior and scope were not updated.
 
-現行contractとして参照しない。現行文書は[[docs/README|Linked Skills documentation]]を参照する。
+Do not use these pages as the current contract. Start from the
+[current documentation](../../README.md).
 
 Archive source commit: `251e05c`

@@ -6,24 +6,35 @@ status: implemented
 
 # Uninstall
 
-Project-localなmanaged skillを削除する。Remoteは参照・変更しない。
+Remove a managed project-local skill without reading or changing remote state.
 
 ## UNIN-001 Selection
 
-`gh linked-skills uninstall SKILL [--force]`を受け取る。`SKILL`はmanifest key、またはproject-relative destination。未管理skillは拒否する。
+Accept `gh linked-skills uninstall SKILL [--force]`. `SKILL` is a manifest key
+or project-relative destination. Reject unmanaged skills.
 
 ## UNIN-002 Safety
 
-Destinationはproject内のregular directoryで、symlink componentを含まないことを確認する。
+Confirm that the destination is a regular directory inside the project with no
+symlink component.
 
-通常はlocal tree SHAとmanifestの`treeSHA`が一致し、追加された空directoryがない場合だけ削除する。Fileの追加、削除、byte、実行bit、空directoryの追加はlocal変更として拒否する。`--force`はlocal一致確認だけを省略し、path安全性は省略しない。
+Without `--force`, delete only when the local tree SHA equals manifest
+`treeSHA` and no empty directory was added. Added or removed files, byte or
+executable-bit changes, and added empty directories count as local changes.
+`--force` skips only the local-equality check, never path safety.
 
-Destinationが不存在なら、data lossがないためmanifest entryだけ削除する。
+When the destination is absent, remove only the manifest entry because no data
+can be lost.
 
 ## UNIN-003 Transaction
 
-Destinationを同じparent内のtemporary directoryへ移動してから、開始時entryとのoptimistic comparisonでmanifest entryを削除する。
+Move the destination to a temporary directory under the same parent, then
+delete the manifest entry through an optimistic comparison with the starting
+entry.
 
-Manifest更新失敗時はdestinationを元へ戻す。成功後にtemporary directoryを削除する。Cleanup失敗はerrorにするが、manifest entryと元destinationは削除済みのままとする。
+If the manifest update fails, restore the destination. After success, delete
+the temporary directory. A cleanup failure is an error, but the manifest entry
+and original destination remain deleted.
 
-GitHub API、GitHub認証、remote source状態は必要としない。
+The operation requires no GitHub API, GitHub authentication, or remote source
+state.

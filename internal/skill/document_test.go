@@ -35,7 +35,7 @@ func TestParseNameRejectsOversizedDescription(t *testing.T) {
 }
 
 func TestParseNameCountsDescriptionCharactersInsteadOfBytes(t *testing.T) {
-	input := "---\nname: sample\ndescription: " + strings.Repeat("あ", 1024) + "\n---\n"
+	input := "---\nname: sample\ndescription: " + strings.Repeat("🙂", 1024) + "\n---\n"
 
 	name, err := ParseName([]byte(input))
 

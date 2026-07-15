@@ -1,18 +1,21 @@
 ---
 title: Installing a managed skill
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
-# SkillのInstall
+# Install a skill
 
-Repository内のskillを探し、現在のprojectへ登録する。Installしたskillは必ずsource repositoryと紐づく。
+Discover a skill in a repository and register it in the current project. Every
+installed skill remains linked to its source repository.
 
-前提: [[docs/spec/2_HowToUse/pages/install-extension|gh-linked-skillsをinstall済み]]、GitHub token、Git repository。
+Requirements: [gh-linked-skills installed](install-extension.md), a GitHub
+token, and a Git repository.
 
-GitHub.comのtokenには、`gh auth login`の保存済み認証または`GH_TOKEN`などを使う。
+For GitHub.com, use credentials saved by `gh auth login` or a supported token
+environment variable such as `GH_TOKEN`.
 
-`BRANCH`または固定snapshotの`TAG`を指定する。
+Select either a `BRANCH` or a fixed-snapshot `TAG`.
 
 ```bash
 gh linked-skills install OWNER/REPO --branch BRANCH
@@ -22,28 +25,36 @@ gh linked-skills install OWNER/REPO --all --branch BRANCH
 gh linked-skills install OWNER/REPO SKILL --tag TAG
 ```
 
-`OWNER/REPO`と`--branch` / `--tag`のどちらか1つは必須。Local directoryやrepository未指定のinstall経路はない。`./skills`、`../skills`、`~/skills`は拒否する。`skills/foo`のような2 segmentはGitHubの`OWNER/REPO`としてのみ解釈し、localからは読まない。HTTPS URL、`.git` suffix、default branch推測、commit指定はない。
+`OWNER/REPO` and exactly one of `--branch` or `--tag` are required. There is no
+local-directory or repository-omitted install path. The command rejects
+`./skills`, `../skills`, and `~/skills`. A two-segment value such as
+`skills/foo` is interpreted only as GitHub `OWNER/REPO`, never as a local path.
+HTTPS URLs, `.git` suffixes, default-branch inference, and commit selection are
+not supported.
 
 - `OWNER/REPO`: GitHub repository
-- `SKILL`: discoveryで見つかったskill名。重複時は`namespace/name`
-- `PATH`: skill directory、またはその`SKILL.md`。直接取得する
-- `--all`: discoveryで見つかった全skill
-- `BRANCH`: pull/push先
-- `TAG`: pull/pushしない固定snapshot
-- 配置先: `.agents/skills/<name>`
+- `SKILL`: discovered skill name; `namespace/name` when names collide
+- `PATH`: skill directory or its `SKILL.md`, fetched directly
+- `--all`: every discovered skill
+- `BRANCH`: source used by `pull` and `push`
+- `TAG`: fixed snapshot that cannot be pulled or pushed
+- destination: `.agents/skills/<name>`
 
-Selectorを省略すると、skill名とpathを一覧表示して終了する。
+Without a selector, the command lists skill names and paths, then exits.
 
-`PATH`は[Agent Skills specification](https://agentskills.io/specification)形式のskill directoryを指す。直下に`SKILL.md`があり、`name`と`description`を持つ。
+`PATH` points to a skill directory that follows the
+[Agent Skills specification](https://agentskills.io/specification). The
+directory must contain `SKILL.md` with `name` and `description` fields.
 
 ```bash
 gh linked-skills install obra/superpowers skills/brainstorming --branch main
 gh linked-skills install obra/superpowers skills/brainstorming/SKILL.md --branch main
 ```
 
-上の2つは同じsourceを表す。`scripts/`、`references/`、`assets/`など、directory内のfileもそのままinstallする。
+These commands identify the same source. Files under `scripts/`, `references/`,
+`assets/`, and other directories inside the skill are installed unchanged.
 
-Discovery対象:
+Discovery recognizes:
 
 - `skills/<name>/SKILL.md`
 - `skills/<namespace>/<name>/SKILL.md`
@@ -52,13 +63,20 @@ Discovery対象:
 - `plugins/<namespace>/skills/<name>/SKILL.md`
 - `<name>/SKILL.md`
 
-`.`から始まるdirectoryとrepository rootの`SKILL.md`は対象外。Exact pathならdiscovery対象外のskill directoryも指定できる。
+Directories beginning with `.` and a repository-root `SKILL.md` are excluded
+from discovery. An exact path can still select a skill outside these patterns.
 
-`--all`は同じref commitから全skillを取得する。同じnameが複数ある場合はinstallせず終了する。全件を事前検証した後、skill単位でinstallする。途中失敗時は成功済みskillを残し、成功と失敗を表示する。
+`--all` fetches every skill from the same ref commit. If names collide, the
+command installs nothing. It validates the complete selection before installing
+one skill at a time. If a later skill fails, successful earlier installations
+remain and the command reports both successes and failures.
 
-既存destinationは上書きしない。同一source/snapshotの再実行はno-op。
+The command does not overwrite an existing destination. Reinstalling the same
+source snapshot is a no-op.
 
-Manifestにはrepository、path、source ref、最後の同期時点を記録する。Extensionは親projectをcommitしないため、install後に記録する。
+The manifest records the repository, path, source ref, and last synchronized
+revision. The extension does not commit the parent project, so record the
+installation afterward:
 
 ```bash
 git add -- .agents/skills .gh-linked-skills.json
@@ -66,14 +84,15 @@ git commit
 gh linked-skills status
 ```
 
-`clean`ならinstall完了。
+`clean` confirms that the installation is complete.
 
-成功時の表示:
+Success output:
 
 - `installed <name> at <path>`
 - `<name> is already installed at <path>`
 - `re-pinned <name> tag: <old> -> <new> (<old-ref-sha> -> <new-ref-sha>)`
 
-内部: [[docs/spec/3_Functions/pages/operations/install|Install spec]]
+Implementation: [Install operation](../../3_Functions/pages/operations/install.md)
 
-Tagの固定運用と再install: [[docs/spec/2_HowToUse/pages/install-by-tag|Tag指定のInstall]]
+See [Installing from a tag](install-by-tag.md) for fixed-release operation and
+reinstallation.

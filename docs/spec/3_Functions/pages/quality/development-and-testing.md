@@ -1,30 +1,30 @@
 ---
 title: Development and testing policy
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Development
 
-外部serviceをadapterへ分離し、通常testをlocalで完結させる。
+Keep external services behind adapters so normal tests run entirely locally.
 
-Behavior変更はTDD:
+Use test-driven development for behavior changes:
 
-1. Failing test
-2. 最小実装
-3. Simplify
-4. HowTo/Spec更新
+1. Write a failing test.
+2. Add the smallest implementation.
+3. Simplify it.
+4. Update user guidance and specifications.
 
 | Layer | Test |
 | --- | --- |
-| domain | pure unit |
+| domain | pure unit test |
 | service | fake dependency |
 | filesystem | `t.TempDir()` |
-| Git | temporary repo/bare remote |
-| GitHub API | test transport/server |
+| Git | temporary repository and bare remote |
+| GitHub API | test transport or server |
 | CLI | injected dependency |
 
-通常testはlive GitHubへ接続しない。
+Normal tests do not connect to live GitHub.
 
 ```bash
 go test ./...
@@ -33,4 +33,5 @@ go vet ./...
 go build ./...
 ```
 
-Live E2Eはowned branch、canonical repo guard、cleanup verificationを必須とする。
+Live E2E requires an owned branch, canonical-repository guard, and verified
+cleanup.

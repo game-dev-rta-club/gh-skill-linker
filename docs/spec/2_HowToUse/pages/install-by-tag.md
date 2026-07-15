@@ -1,12 +1,12 @@
 ---
 title: Installing from a tag
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
-# Tag指定のInstall
+# Install from a tag
 
-Release時点のskillを固定してinstallする。
+Use a tag to install a skill as a fixed release snapshot.
 
 ```bash
 gh linked-skills install OWNER/REPO --tag TAG
@@ -15,7 +15,8 @@ gh linked-skills install OWNER/REPO PATH --tag TAG
 gh linked-skills install OWNER/REPO --all --tag TAG
 ```
 
-`--branch`と`--tag`はどちらか1つだけ必須。完全一致するtag名だけを扱う。
+Exactly one of `--branch` and `--tag` is required. Tag names must match
+exactly.
 
 ```bash
 gh linked-skills install addyosmani/agent-skills \
@@ -23,35 +24,38 @@ gh linked-skills install addyosmani/agent-skills \
   --tag 0.6.3
 ```
 
-Tagは固定snapshotとして扱う。
+The extension treats a tag as a fixed snapshot.
 
-| Operation | Tag指定skill |
+| Operation | Tag-backed skill |
 | --- | --- |
-| install | 指定tagの内容を配置 |
-| status | local差分とtag identityを確認 |
-| pull | 不可。`fixed_source_ref` |
-| push | 不可。`source_ref_read_only` |
+| install | Place the content from the requested tag |
+| status | Check local differences and tag identity |
+| pull | Rejected with `fixed_source_ref` |
+| push | Rejected with `source_ref_read_only` |
 
-Local編集は可能だがpushできない。`status`はlocal変更を警告する。
+You can edit a local tag-backed skill, but you cannot push it. `status` warns
+about local changes.
 
-## Tag変更
+## Change the tag
 
-同じrepositoryとpathを別tagで再installする。
+Reinstall the same repository and path with a different tag.
 
 ```bash
 gh linked-skills install OWNER/REPO PATH --tag NEW_TAG
 ```
 
-次の条件を満たす場合だけtagを変更する。
+The tag changes only when all of these conditions hold:
 
-- 既存sourceもtag
-- repository、path、destinationが同じ
-- localが記録済みbaselineと一致
-- 1 skillを明示。`--all`によるtag変更ではない
+- the existing source is also a tag
+- repository, path, and destination are unchanged
+- local content matches the recorded baseline
+- one skill is selected explicitly; `--all` cannot change a tag
 
-Mergeとlocal変更の破棄は行わない。同じtagとref SHAならno-op。Branchとの切り替えは拒否する。
+The command does not merge or discard local changes. Reinstalling the same tag
+and ref SHA is a no-op. Switching between a branch and a tag is rejected.
 
-Tag名が同じままref SHAが変わった場合は`tag_moved`として拒否する。受け入れる場合だけ明示する。
+If the tag name is unchanged but its ref SHA moved, the command rejects it as
+`tag_moved`. Accept the moved tag only through an explicit override:
 
 ```bash
 gh linked-skills install OWNER/REPO PATH \
@@ -59,8 +63,10 @@ gh linked-skills install OWNER/REPO PATH \
   --accept-moved-tag
 ```
 
-成功時は変更前後のtagとref SHAを表示する。Tag削除や参照失敗は`source_unavailable`。
+On success, the command prints the old and new tags and ref SHAs. A deleted or
+unresolvable tag produces `source_unavailable`.
 
-対象外: `latest`、semver範囲、commit SHA、default branch fallback、tag作成。
+The command does not support `latest`, semantic-version ranges, commit SHAs,
+default-branch fallback, or tag creation.
 
-内部: [[docs/spec/3_Functions/pages/architecture/source-reference|Source reference]]
+Implementation: [Source references](../../3_Functions/pages/architecture/source-reference.md)

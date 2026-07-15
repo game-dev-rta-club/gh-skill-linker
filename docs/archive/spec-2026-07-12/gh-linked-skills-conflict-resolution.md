@@ -1,26 +1,27 @@
 ---
-title: Linked Skills 手動競合解決
-updated: 2026-07-12
-status: implemented
+title: Linked Skills manual conflict resolution
+updated: 2026-07-15
+status: archived
 ---
 
-# 手動競合解決
+# Manual conflict resolution
 
 > [!SUMMARY]
-> 自動で意味を選ばず、pullが書いたGit diff3 markerを利用者が通常fileとして編集する。
+> Pull does not choose meaning automatically. The user edits the Git diff3
+> markers written to ordinary files.
 
 ## Flow
 
 ```text
 pull
-  → text conflictをfileへ書く
-  → manifest baselineをremote headへ進める
-  → 利用者がmarkerを解消する
-  → statusがpushを示す
-  → push
+  -> write text conflicts to files
+  -> advance the manifest baseline to the remote head
+  -> user resolves markers
+  -> status reports push
+  -> push
 ```
 
-markerは次の形式とする。
+Markers use this format:
 
 ```text
  <<<<<<< gh-linked-skills:local
@@ -32,11 +33,17 @@ markerは次の形式とする。
  >>>>>>> gh-linked-skills:remote:<tree-sha>
 ```
 
-利用者はmarker行と不要な内容を削除し、採用する最終内容だけを残す。markerが一つでも残る間、`status`は`conflict`、pull / pushは`unresolved_conflict`で不可とする。専用indexやconflict状態fileは持たない。
+The user deletes marker lines and unwanted content, leaving only the final
+accepted content. While any marker remains, `status` reports `conflict` and
+pull/push are unavailable with `unresolved_conflict`. There is no dedicated
+index or conflict-state file.
 
-binary conflict、modify/delete、file/directory collisionはmarkerへ変換せず、localを変更しない。SKILL frontmatter内のtext conflictも同じmarkerとして書き、解消後のpush時にCodex互換を再検証する。
+Binary conflicts, modify/delete conflicts, and file/directory collisions do not
+become markers and do not change local content. A text conflict inside skill
+frontmatter uses the same markers; push revalidates Codex compatibility after
+resolution.
 
 ## Related
 
-- [[gh-linked-skills|概要]]
-- [[gh-linked-skills-functions|機能一覧]]
+- [Overview](gh-linked-skills.md)
+- [Functions](gh-linked-skills-functions.md)

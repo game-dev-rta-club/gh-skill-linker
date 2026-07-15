@@ -1,10 +1,10 @@
 ---
 title: Integrations index
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Integrations
 
-- [[docs/spec/3_Functions/pages/integrations/github|GitHub]]
-- [[docs/spec/3_Functions/pages/integrations/git|Git]]
+- [GitHub](github.md)
+- [Git](git.md)

@@ -1,19 +1,19 @@
 ---
 title: Installing Linked Skills
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
-# Linked SkillsのInstall
+# Install Linked Skills
 
-Linked Skills本体をGitHub CLI extensionとしてinstallする。
+Install Linked Skills as a GitHub CLI extension.
 
-前提: macOSまたはLinux、`gh`、Git。
+Requirements: macOS or Linux, `gh`, and Git.
 
 ```bash
 gh extension install game-dev-rta-club/gh-linked-skills
 ```
 
-WindowsとGHESは正式対応しない。
+Windows and GitHub Enterprise Server are not officially supported.
 
-次: [[docs/spec/2_HowToUse/pages/install-skill|SkillのInstall]]
+Next: [Install a skill](install-skill.md)

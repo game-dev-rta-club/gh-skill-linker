@@ -1,67 +1,89 @@
 ---
 title: Install reference
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Install
 
-Remote snapshotを初回配置し、manifestへ同期点を記録する。
+Place a remote snapshot for the first time and record its synchronization point
+in the manifest.
 
 ## INST-001 Source resolution
 
-`OWNER/REPO`形式のrepository、optional selector、source refを受け取る。Repositoryと`--branch` / `--tag`のどちらか1つは必須。Local sourceとrepository未指定installは扱わない。
+Accept an `OWNER/REPO` repository, optional selector, and source ref. The
+repository and exactly one of `--branch` or `--tag` are required. Local sources
+and repository-omitted installation are not supported.
 
-- selectorなし: discovery結果を表示
-- name: discovery結果から一致する1件を選択
-- `namespace/name`: namespaceを含めて選択
-- exact path: discoveryを省略
-- `--all`: discovery結果を全件選択
+- no selector: display discovery results
+- name: select one matching discovery result
+- `namespace/name`: select with the namespace
+- exact path: bypass discovery
+- `--all`: select every discovery result
 
-Exact pathはAgent Skills形式のskill directory、または末尾`/SKILL.md`。File pathは親directoryへ正規化する。Repository rootの`SKILL.md`は対象外。
+An exact path identifies an Agent Skills directory or a path ending in
+`/SKILL.md`. A file path is normalized to its parent directory. A repository-
+root `SKILL.md` is excluded.
 
-Source refを一度だけcommit SHAへ解決し、同じSHAのrecursive treeから候補を作る。結果はdisplay name順。Hidden directoryは除外する。
+Resolve the source ref to a commit SHA once and build candidates from the
+recursive tree at that SHA. Results are sorted by display name. Hidden
+directories are excluded.
 
-対象pathは[[docs/spec/2_HowToUse/pages/install-skill|SkillのInstall]]に定義する。Simple nameが複数pathに一致する場合はnamespace指定を要求する。
+[Install a skill](../../../2_HowToUse/pages/install-skill.md) defines the
+recognized paths. When one simple name matches multiple paths, require a
+namespace.
 
 ## INST-002 Snapshot install
 
-直下の`SKILL.md`からname/descriptionを検証し、source directory名との一致を確認する。nameから`.agents/skills/<name>`を決める。description長はUnicode code point数で判定する。
+Validate name and description from the direct `SKILL.md` and require the name
+to match the source directory. The name determines
+`.agents/skills/<name>`. Description length is counted in Unicode code points.
 
-Directory全体のraw byte、path、実行bitをstageし、target不存在時だけrenameする。contentへmetadataを追加しない。
+Stage the entire directory as raw bytes, paths, and executable bits. Rename it
+into place only when the target is absent. Do not add metadata to content.
 
 ## INST-003 Install collision and idempotency
 
-拒否:
+Reject:
 
-- 同名entryのsource/destination不一致
-- entry一致、local snapshot不一致
-- branch/tagの相互切り替え
-- 同じsourceが別名で登録済み
-- destination使用済み
-- unmanaged destinationあり
+- a same-name entry with a different source or destination
+- a matching entry with a different local snapshot
+- switching between branch and tag
+- the same source registered under another name
+- an occupied destination
+- an unmanaged destination
 
-Entry、remote、localが完全一致する再実行だけno-op。
+Only a rerun where entry, remote, and local are identical is a no-op.
 
-Manifest失敗時はtargetを削除する。削除失敗もerrorへ含める。lockはない。
+If the manifest write fails, remove the target. Include a removal failure in
+the returned error. There is no lock.
 
-## INST-004 Tag repin
+## INST-004 Tag re-pin
 
-同じrepository、source path、destinationのtag skillは、別tagで再installできる。
+A tag-backed skill can be reinstalled from another tag when repository, source
+path, and destination are unchanged.
 
-1. 新tagを解決し、snapshotを取得・検証
-2. 旧baselineとlocalの完全一致を確認
-3. 新snapshotへ置換
-4. manifestを更新
+1. Resolve the new tag, then retrieve and validate its snapshot.
+2. Confirm that local content exactly matches the old baseline.
+3. Replace local content with the new snapshot.
+4. Update the manifest.
 
-Local変更があれば拒否する。Mergeは行わない。同名tagの`refSHA`変更は`--accept-moved-tag`が必要。別tagにこのflagを指定した場合は拒否する。
+Reject local changes and do not merge. A changed `refSHA` under the same tag
+name requires `--accept-moved-tag`. Reject that flag when selecting a different
+tag.
 
-同じtreeを指す別tagでもmanifestを更新する。`--all`では既存skillをrepinしない。
+Even when another tag points to the same tree, update the manifest. `--all`
+does not re-pin existing skills.
 
 ## INST-005 Bulk install
 
-`--all`は1つのdiscovery commitを全snapshotのbaselineにする。
+`--all` uses one discovery commit as the baseline for every snapshot.
 
-Mutation前に全件を取得し、document、name、source、destination、local snapshot、LFS、path containmentを検証する。Name衝突時は何もinstallしない。
+Before mutation, retrieve and validate every document, name, source,
+destination, local snapshot, LFS state, and path-containment rule. A name
+collision prevents every install.
 
-検証後はdisplay name順にskill単位でinstallする。各skillのdirectoryとmanifest更新はINST-003と同じtransaction。途中失敗時に成功済みskillはrollbackしない。Resultは成功済みskillとerrorを返す。
+After validation, install one skill at a time in display-name order. Each skill
+uses the INST-003 directory and manifest transaction. A later failure does not
+roll back earlier successful skills. The result contains successes and the
+error.

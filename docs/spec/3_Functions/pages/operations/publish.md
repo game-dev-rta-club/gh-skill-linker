@@ -1,41 +1,50 @@
 ---
 title: Publish reference
-updated: 2026-07-14
+updated: 2026-07-15
 status: implemented
 ---
 
 # Publish
 
-未管理local skillを既存repositoryへ追加し、remote成功後にmanifestへ同期点を記録する。
+Add an unmanaged local skill to an existing repository, then record the
+synchronization point in the manifest after remote success.
 
 ## PUB-001 Local preflight
 
-`OWNER/REPO`、local selector、branchは必須。Selectorはnameまたは`.agents/skills/<name>`。
+`OWNER/REPO`, a local selector, and a branch are required. The selector is a
+name or `.agents/skills/<name>`.
 
-拒否:
+Reject:
 
-- manifest登録済み
-- project外path、symlink、非regular file
-- nameとdirectory不一致、不正`SKILL.md`、marker、LFS pointer
-- ignored local file
-- repository read-only
+- a skill already registered in the manifest
+- a path outside the project, symlink, or non-regular file
+- a name/directory mismatch, invalid `SKILL.md`, marker, or LFS pointer
+- an ignored local file
+- a read-only repository
 
-Remote pathは`skills/<name>`。Repository作成、path指定、tag、relink、migration、copyは扱わない。
+The remote path is `skills/<name>`. Repository creation, arbitrary path
+selection, tags, relinking, migration, and copying are not supported.
 
 ## PUB-002 Remote mutation
 
-- branchあり、pathなし: subtreeを追加してnormal push
-- branchあり、tree SHA一致: commitせず既存subtreeを採用
-- branchあり、path不一致: 拒否
-- repositoryにrefなし: 指定branchを最初のnormal pushで作成
-- repositoryにrefあり、branchなし: 拒否
+- branch exists, path absent: add the subtree through a normal push
+- branch exists, tree SHA matches: adopt the existing subtree without a commit
+- branch exists, path differs: reject
+- repository has no refs: create the requested branch through the first normal
+  push
+- repository has refs, branch absent: reject
 
-Bytes、relative path、実行bitをGit treeとして比較する。Ancestorがfile/symlinkの場合も不一致。
+Compare bytes, relative paths, and executable bits as a Git tree. An ancestor
+that is a file or symlink is also a mismatch.
 
-Clone後のnormal pushがnon-fast-forwardならremote changedとして拒否する。Unrelated contentを変更しない。
+If the normal push after cloning is non-fast-forward, reject it as remote
+changed. Do not modify unrelated content.
 
 ## PUB-003 Manifest registration
 
-Remote成功後、開始時manifestと再読manifestが一致する場合だけentryを追加する。Repository、source path/ref、commit/tree SHA、destinationを1回で記録する。Process lockは持たない。
+After remote success, add the entry only when the manifest still matches the
+version read at the start. Record repository, source path/ref, commit/tree SHA,
+and destination in one write. There is no process lock.
 
-Manifest更新失敗後はremoteを戻さない。再実行すると一致済みremote subtreeを採用し、manifest登録だけを再試行できる。
+Do not roll back the remote after a manifest failure. A rerun can adopt the
+identical remote subtree and retry only manifest registration.

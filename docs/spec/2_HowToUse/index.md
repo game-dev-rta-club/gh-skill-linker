@@ -1,29 +1,32 @@
 ---
-title: Linked Skills HowToUse
-updated: 2026-07-14
+title: Linked Skills usage
+updated: 2026-07-15
 status: implemented
 ---
 
-# HowToUse
+# How to use Linked Skills
 
-利用者に見える操作の正本。通常はこの層だけ読めばよい。
+This section is the source of truth for user-visible operations. Most users do
+not need to read beyond this layer.
 
-`source`はGitHub上のskill、`local`は現在のGit project内のcopy。全操作はcurrent Git worktree rootを対象にする。
+A `source` is a skill on GitHub. `local` is the copy inside the current Git
+project. Every operation targets the root of the current Git worktree.
 
-最初に本体を導入し、remoteからinstallするか、local skillをpublishする。
+First install the extension. Then install a skill from a remote source or
+publish a local skill.
 
-1. [[docs/spec/2_HowToUse/pages/install-extension|Linked SkillsのInstall]]
-2. [[docs/spec/2_HowToUse/pages/install-skill|SkillのInstall]]
-3. [[docs/spec/2_HowToUse/pages/publish|Publish]]
-4. [[docs/spec/2_HowToUse/pages/install-by-tag|Tag指定のInstall]]
+1. [Install the extension](pages/install-extension.md)
+2. [Install a skill](pages/install-skill.md)
+3. [Publish a skill](pages/publish.md)
+4. [Install from a tag](pages/install-by-tag.md)
 
-操作:
+Operations:
 
-- [[docs/spec/2_HowToUse/pages/status|Status]]
-- [[docs/spec/2_HowToUse/pages/pull|Pull]]
-- [[docs/spec/2_HowToUse/pages/push|Push]]
-- [[docs/spec/2_HowToUse/pages/uninstall|Uninstall]]
-- [[docs/spec/2_HowToUse/pages/resolve-conflicts|Conflict]]
-- [[docs/spec/2_HowToUse/pages/command-reference|Commands]]
+- [Check status](pages/status.md)
+- [Pull changes](pages/pull.md)
+- [Push changes](pages/push.md)
+- [Uninstall a skill](pages/uninstall.md)
+- [Resolve a conflict](pages/resolve-conflicts.md)
+- [Command reference](pages/command-reference.md)
 
-内部: [[docs/spec/3_Functions/index|Functions]]
+For implementation details, see [Functions](../3_Functions/index.md).

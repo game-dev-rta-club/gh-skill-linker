@@ -1,47 +1,64 @@
 ---
-title: Linked Skills 実装方針
-updated: 2026-07-12
-status: implemented
+title: Linked Skills implementation plan
+updated: 2026-07-15
+status: archived
 ---
 
-# 実装方針
+# Implementation plan
 
 ## Components
 
-| Component | 責務 |
+| Component | Responsibility |
 | --- | --- |
-| CLI | argument、exit code、表示 |
-| manifest | schema検証、atomic JSON write、baseline更新 |
-| GitHub API | private repositoryのref、tree、blob、permission読取 |
-| workspace | raw snapshot読取、staging、rollback付き置換 |
-| system Git | project inventory、diff3 merge、temporary clone、commit、push |
+| CLI | arguments, exit codes, presentation |
+| manifest | schema validation, atomic JSON write, baseline update |
+| GitHub API | read private repository refs, trees, blobs, and permissions |
+| workspace | read raw snapshots, stage, and replace with rollback |
+| system Git | project inventory, diff3 merge, temporary clone, commit, push |
 
-production codeは`gh skill` subprocessを実行しない。GitHub認証は`go-gh`と`gh auth`、push credentialは一時的なGit extra headerを使い、tokenをlogへ出さない。
+Production code does not execute a `gh skill` subprocess. Authentication uses
+`go-gh` and `gh auth`. Push credentials use a temporary Git extra header and
+tokens never appear in logs.
 
 ## Manifest
 
-project rootの`.gh-linked-skills.json`を唯一の管理情報とする。managed skillごとにrepository、source path、branch、destination、last synchronized commit SHA / subtree SHAを持つ。workflow skillはagent、destination、bundle version、SHA-256を持つ。
+Use `.gh-linked-skills.json` at the project root as the only management record.
+Each managed skill stores repository, source path, branch, destination, and the
+last synchronized commit and subtree SHAs. A workflow skill stores agent,
+destination, bundle version, and SHA-256.
 
-JSONはunknown fieldと不正path / branch / SHAを拒否し、temporary fileをsyncしてatomic renameする。skill contentとmanifestは親projectでcommitするが、extensionはstagingやcommitを暗黙に行わない。
+Reject unknown JSON fields and invalid paths, branches, or SHAs. Sync a
+temporary file before atomic rename. Skill content and manifest are committed
+in the parent project, but the extension never stages or commits implicitly.
 
 ## Mutation safety
 
-installとpullは対象directoryを同じfilesystem内でstagingする。pullは現在directoryをrollback場所へ移し、expected snapshotとの一致を再確認してから新directoryをactivateする。manifest writeが失敗すれば元directoryを戻す。
+Install and pull stage the target directory on the same filesystem. Pull moves
+the current directory to a rollback location, confirms it still matches the
+expected snapshot, then activates the new directory. Restore the original when
+the manifest write fails.
 
-pushはremote mutationが先になるためrollbackできない。manifest更新失敗を専用errorにし、再pushではなく`pull`によるreconcileを案内する。すべてのpathはproject root / skill rootからのescapeを拒否し、symlinkを辿らない。
+Push cannot roll back because remote mutation happens first. Return a dedicated
+error for manifest update failure and recommend `pull` for reconciliation
+instead of another push. Reject every path that escapes the project or skill
+root, and never follow symlinks.
 
 ## Tests
 
-- pure test: state、manifest validation、raw byte/mode比較
-- filesystem test: install、atomic replace、rollback、workflow bundle ownership
-- local Git test: inventory、diff3、temporary bare repository push、race rejection
-- HTTP test: GitHub tree/blob/ref/permission adapter
-- private E2E: install、status、pull、push、conflict marker、手動解消
+- pure tests: state, manifest validation, raw byte/mode comparison
+- filesystem tests: install, atomic replacement, rollback, workflow bundle
+  ownership
+- local Git tests: inventory, diff3, temporary bare-repository push, race
+  rejection
+- HTTP tests: GitHub tree/blob/ref/permission adapter
+- private E2E: install, status, pull, push, conflict markers, manual resolution
 
-default testはnetwork、利用者credential、既存repositoryを使わない。変更ごとに`go test ./...`、`go test -race ./...`、`go vet ./...`、`go build ./...`を通す。
+Default tests use no network, user credentials, or existing repositories. Run
+`go test ./...`, `go test -race ./...`, `go vet ./...`, and `go build ./...`
+after every change.
 
 ## Related
 
-- [[gh-linked-skills|概要]]
-- [[gh-linked-skills-functions|機能一覧]]
-- [[gh-linked-skills-distribution|配布と対応範囲]]
+- [Overview](gh-linked-skills.md)
+- [Functions](gh-linked-skills-functions.md)
+- [Distribution and support](gh-linked-skills-distribution.md)

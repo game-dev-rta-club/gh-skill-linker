@@ -1,25 +1,33 @@
 ---
 title: Filesystem specification
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Filesystem
 
-書込みをproject内へ制限し、symlinkとpath collisionの境界を定義する。
+Restrict writes to the project and define symlink and path-collision
+boundaries.
 
 ## PATH-001 Filesystem containment
 
-Root/targetをabsolute clean pathにする。Root外、symlink、途中のnon-directoryを拒否。不存在component以降は検査しない。
+Convert root and target to absolute, clean paths. Reject a path outside the
+root, a symlink, or an intermediate non-directory. Do not inspect components
+after the first missing component.
 
-Remote pathはabsolute、backslash、`.`、`..`、non-canonicalを拒否。
+Reject remote paths that are absolute, contain backslashes, `.` or `..`, or are
+not canonical.
 
 ## PATH-002 Existing-install containment gap
 
-新規install、status、pull、pushはcontainmentを検査する。
+New install, status, pull, and push operations check containment.
 
-既存managed installの再実行だけ、destinationを先に読む。親をsymlinkへ変更された場合、project外を読み得る。書込みはしない。
+Only a rerun of an existing managed install reads the destination first. If a
+parent is replaced with a symlink, this read may reach outside the project. It
+does not write outside the project.
 
 ## PATH-003 Case and Unicode boundary
 
-Case folding/Unicode normalization collisionを検査しない。該当filesystemでは衝突、順序依存、errorになり得る。Map順は未定義。
+The extension does not detect case-folding or Unicode-normalization collisions.
+On affected filesystems, they may produce collisions, order-dependent behavior,
+or errors. Map iteration order is undefined.

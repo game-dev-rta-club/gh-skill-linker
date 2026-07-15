@@ -1,12 +1,12 @@
 ---
 title: Quality index
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Quality
 
-- [[docs/spec/3_Functions/pages/quality/development-and-testing|Development]]
-- [[docs/spec/3_Functions/pages/quality/distribution|Distribution]]
-- [[docs/spec/3_Functions/pages/quality/automation|Automation]]
-- [[docs/spec/3_Functions/pages/quality/coverage|Coverage]]
+- [Development](development-and-testing.md)
+- [Distribution](distribution.md)
+- [Automation](automation.md)
+- [Coverage](coverage.md)

@@ -1,10 +1,10 @@
 ---
 title: CLI index
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # CLI
 
-- [[docs/spec/2_HowToUse/pages/command-reference|Public commands]]
-- [[docs/spec/3_Functions/pages/cli/runtime|Runtime]]
+- [Public commands](../../../2_HowToUse/pages/command-reference.md)
+- [Runtime](runtime.md)

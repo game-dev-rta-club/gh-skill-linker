@@ -6,16 +6,26 @@ status: implemented
 
 # Safety
 
-不明な状態では上書きせず、利用者が確認できる情報を残す。保証はoperationごとに異なる。
+When state is uncertain, the extension avoids overwriting content and preserves
+information the user can inspect. Guarantees differ by operation.
 
-- install: ownership不明のdestinationを上書きしない
-- publish: 未管理skillだけを空remote pathへ追加する。一致済みpathは採用し、不一致は上書きしない
-- pull: 新内容をstageし、localを再読してから入れ替える。manifest失敗時は元へ戻す
-- push: source skillのtree SHAをclone後にも再確認し、normal pushだけを使う
-- uninstall: local変更を通常削除せず、`--force`だけが同期点との差分を破棄する
-- merge: text conflictはmarkerを残し、binary/構造conflictはworkspace変更前に停止する
-- credential: repository configへ保存せず、logではredactする
+- install: never overwrite a destination with unknown ownership
+- publish: add only unmanaged skills to empty remote paths; adopt identical
+  existing content and reject different content
+- pull: stage new content, reread local content before replacement, and restore
+  the original directory if the manifest update fails
+- push: recheck the source skill tree SHA after cloning and use only a normal
+  push
+- uninstall: preserve local changes unless `--force` explicitly discards
+  differences from the synchronization point
+- merge: leave markers for text conflicts and stop before workspace changes for
+  binary or structural conflicts
+- credentials: never save credentials in repository configuration and redact
+  them from logs
 
-Raw byteと実行可否を転送するが、新規fileのmodeはumaskの影響を受ける。Push/publish成功後のmanifest失敗はremoteを戻さない。
+The extension transfers raw bytes and executable state. The system umask still
+affects the mode of new files. If the manifest update fails after a successful
+push or publish, the remote change is not rolled back.
 
-Process lock、journal、signal recoveryはない。詳細は[[docs/spec/3_Functions/pages/storage/transactions|Transactions]]。
+There is no process lock, journal, or signal recovery. See
+[Transactions](../storage/transactions.md).

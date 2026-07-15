@@ -6,22 +6,26 @@ status: implemented
 
 # Transactions
 
-Local mutationは可能な範囲でrollbackする。Remote pushはrollbackしない。Process中断からの自動復旧は扱わない。
+Roll back local mutations where possible. Do not roll back a remote push. The
+extension does not recover automatically from process interruption.
 
 ## TXN-001 Interruption and locking boundary
 
-Process lock、journal、startup recovery、signal handlerはない。SIGINT等ではtemporary directoryが残り得る。
+There is no process lock, journal, startup recovery, or signal handler. SIGINT
+and similar interruptions may leave temporary directories behind.
 
-Pullは2回のrename間で終了するとtargetが消え、backupだけ残り得る。自動復旧しない。
+If pull stops between its two renames, the target may be absent while only the
+backup remains. Recovery is manual.
 
-| Operation | Manifest失敗時 |
+| Operation | When the manifest update fails |
 | --- | --- |
-| install | target削除 |
-| install `--all` | 失敗したtargetを削除。成功済みskillは維持 |
-| pull | original復元 |
-| push | remoteを戻さない |
-| publish | remoteを戻さない。同じcommandでmanifest登録を再試行 |
-| uninstall | 移動済みのoriginalを復元 |
-| manifest | fsync後、同一directoryでrename |
+| install | Remove the target |
+| install `--all` | Remove the failed target and preserve successful skills |
+| pull | Restore the original |
+| push | Do not restore the remote |
+| publish | Do not restore the remote; rerun the same command to retry registration |
+| uninstall | Restore the moved original |
+| manifest | Rename within the same directory after fsync |
 
-Rollback失敗時はbackup pathをerrorへ含め、transactionを残す。
+When rollback fails, include the backup path in the error and leave the
+transaction for manual recovery.
