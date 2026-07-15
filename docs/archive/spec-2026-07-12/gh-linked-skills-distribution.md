@@ -1,46 +1,51 @@
 ---
-title: Linked Skills 配布と対応範囲
-updated: 2026-07-12
-status: implemented
+title: Linked Skills distribution and support
+updated: 2026-07-15
+status: archived
 ---
 
-# 配布と対応範囲
+# Distribution and support
 
 ## Extension
 
-repository名、extension名、project名は`gh-linked-skills`に統一する。Go製precompiled GitHub CLI extensionとしてreleaseし、利用者側へGo runtimeを要求しない。
+The repository, extension, and project names are all `gh-linked-skills`. Release
+it as a precompiled Go GitHub CLI extension so users do not need a Go runtime.
 
 ```bash
 gh extension install game-dev-rta-club/gh-linked-skills
 gh extension upgrade game-dev-rta-club/gh-linked-skills
 ```
 
-GitHub CLI 2.96.0未満は処理前にupdateを要求する。古いversion向けcompatibility layerは持たない。
+Require an update before operation for GitHub CLI versions earlier than 2.96.0.
+Do not maintain a compatibility layer for older versions.
 
 ## Workflow skill
 
-workflow skillはextension binaryへ埋め込み、追加downloadなしでinstallする。
+Embed the workflow skill in the extension binary and install it without an
+additional download.
 
 ```bash
 gh linked-skills skills install --agent codex
 gh linked-skills skills install --agent claude-code
 ```
 
-project scopeだけを提供する。extension upgrade後に同じcommandを再実行すると、local変更のない管理済みbundleだけを更新する。
+Provide project scope only. Running the same command after an extension upgrade
+updates only managed bundles with no local changes.
 
 ## Support
 
-| 対象 | MVP |
+| Target | MVP |
 | --- | --- |
 | Host | GitHub.com |
-| OS | macOS、Linux |
-| Git | system Gitが必要 |
-| Managed skill | Codex互換、project scope |
-| Workflow adapter | Codex、Claude Code |
+| OS | macOS, Linux |
+| Git | system Git required |
+| Managed skill | Codex-compatible, project scope |
+| Workflow adapter | Codex, Claude Code |
 
-GHES、Windows、user scope、custom destinationは正式対応しない。
+GHES, Windows, user scope, and custom destinations are not officially
+supported.
 
 ## Related
 
-- [[gh-linked-skills|概要]]
-- [[gh-linked-skills-implementation|実装方針]]
+- [Overview](gh-linked-skills.md)
+- [Implementation](gh-linked-skills-implementation.md)
