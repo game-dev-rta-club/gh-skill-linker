@@ -68,6 +68,11 @@ func TestProposeSkillUpdatesSameBranchWithNormalPush(t *testing.T) {
 }
 
 func TestProposeSkillMergesAdvancedBaseUsingResolvedSnapshot(t *testing.T) {
+	t.Setenv("GIT_CONFIG_GLOBAL", os.DevNull)
+	t.Setenv("GIT_CONFIG_SYSTEM", os.DevNull)
+	t.Setenv("GIT_CONFIG_COUNT", "1")
+	t.Setenv("GIT_CONFIG_KEY_0", "user.useConfigOnly")
+	t.Setenv("GIT_CONFIG_VALUE_0", "true")
 	bare, baseTree := createBareSkillRepository(t)
 	client := New(command.New("git"))
 	proposalA := publishSnapshot(t, "Proposal A\n")
@@ -79,8 +84,11 @@ func TestProposeSkillMergesAdvancedBaseUsingResolvedSnapshot(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	mainCommit, mainTree := advanceRemoteSkill(t, bare, "main", "Remote main\n", "main-only.txt")
-	resolved := publishSnapshot(t, "Remote main\nProposal A\nProposal B\n")
+	mainCommit, mainTree := advanceRemoteFile(t, bare, "main", "skills/sample/remote.txt")
+	resolved := publishSnapshot(t, "Proposal A\nProposal B\n")
+	resolved.Files["remote.txt"] = []byte("main update\n")
+	resolved.Executable["remote.txt"] = false
+	resolved.TreeSHA = treeSHA(t, resolved)
 
 	updated, err := client.ProposeSkill(context.Background(), ProposalRequest{
 		RepositoryURL: bare, BaseBranch: "main", HeadBranch: "skill-linker/sample/one",
@@ -98,10 +106,10 @@ func TestProposeSkillMergesAdvancedBaseUsingResolvedSnapshot(t *testing.T) {
 	if got := strings.TrimSpace(gitOutput(t, "--git-dir", bare, "merge-base", updated.CommitSHA, mainCommit)); got != mainCommit {
 		t.Fatalf("merge base = %s, want current main %s", got, mainCommit)
 	}
-	if got := gitOutput(t, "--git-dir", bare, "show", updated.CommitSHA+":main-only.txt"); got != "main update\n" {
-		t.Fatalf("main-only file = %q", got)
+	if got := gitOutput(t, "--git-dir", bare, "show", updated.CommitSHA+":skills/sample/remote.txt"); got != "main update\n" {
+		t.Fatalf("remote file = %q", got)
 	}
-	if got := gitOutput(t, "--git-dir", bare, "show", updated.CommitSHA+":skills/sample/SKILL.md"); !strings.Contains(got, "Remote main\nProposal A\nProposal B") {
+	if got := gitOutput(t, "--git-dir", bare, "show", updated.CommitSHA+":skills/sample/SKILL.md"); !strings.Contains(got, "Proposal A\nProposal B") {
 		t.Fatalf("resolved skill = %q", got)
 	}
 }
@@ -167,6 +175,27 @@ func advanceRemoteSkill(t *testing.T, bare, branch, body, extraFile string) (str
 	}
 	runGit(t, "-C", work, "add", ".")
 	runGit(t, "-C", work, "commit", "-m", "external update")
+	runGit(t, "-C", work, "push", "origin", "HEAD:refs/heads/"+branch)
+	commit := strings.TrimSpace(gitOutput(t, "-C", work, "rev-parse", "HEAD"))
+	tree := strings.TrimSpace(gitOutput(t, "-C", work, "rev-parse", "HEAD:skills/sample"))
+	return commit, tree
+}
+
+func advanceRemoteFile(t *testing.T, bare, branch, relative string) (string, string) {
+	t.Helper()
+	work := filepath.Join(t.TempDir(), "advance-file")
+	runGit(t, "clone", "--branch", branch, "--single-branch", bare, work)
+	runGit(t, "-C", work, "config", "user.name", "External")
+	runGit(t, "-C", work, "config", "user.email", "external@example.com")
+	target := filepath.Join(work, filepath.FromSlash(relative))
+	if err := os.MkdirAll(filepath.Dir(target), 0o755); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(target, []byte("main update\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+	runGit(t, "-C", work, "add", relative)
+	runGit(t, "-C", work, "commit", "-m", "external file update")
 	runGit(t, "-C", work, "push", "origin", "HEAD:refs/heads/"+branch)
 	commit := strings.TrimSpace(gitOutput(t, "-C", work, "rev-parse", "HEAD"))
 	tree := strings.TrimSpace(gitOutput(t, "-C", work, "rev-parse", "HEAD:skills/sample"))

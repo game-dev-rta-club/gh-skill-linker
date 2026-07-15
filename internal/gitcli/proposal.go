@@ -210,7 +210,12 @@ func (c *Client) requireTree(ctx context.Context, checkout, revision, skillPath,
 
 func (c *Client) mergeProposalBase(ctx context.Context, checkout, skillPath, baseBranch string) (bool, error) {
 	revision := "refs/remotes/origin/" + baseBranch
-	_, stderr, err := c.runner.Run(ctx, "-C", checkout, "merge", "--no-commit", "--no-ff", revision)
+	_, stderr, err := c.runner.Run(
+		ctx, "-C", checkout,
+		"-c", "user.name=gh-skill-linker",
+		"-c", "user.email=gh-skill-linker@users.noreply.github.com",
+		"merge", "--no-commit", "--no-ff", revision,
+	)
 	if err != nil {
 		paths, pathsErr := c.unmergedPaths(ctx, checkout)
 		if pathsErr != nil {
