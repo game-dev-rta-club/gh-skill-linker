@@ -20,7 +20,7 @@ jobs:
       GH_TOKEN: ${{ github.token }}
       BRANCH: test/e2e/${{ github.run_id }}/${{ github.run_attempt }}
     steps:
-      - uses: actions/checkout@v5
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0
       - uses: actions/setup-go@v6
