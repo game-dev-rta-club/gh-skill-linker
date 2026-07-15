@@ -28,6 +28,13 @@ func TestProjectUsesEnglishScripts(t *testing.T) {
 			t.Fatal(err)
 		}
 		if info.Mode()&os.ModeSymlink != 0 {
+			target, err := os.Readlink(path)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if containsJapaneseText(target) {
+				t.Errorf("symlink target contains a Japanese character: %s", path)
+			}
 			continue
 		}
 
@@ -60,5 +67,19 @@ func TestContainsJapaneseText(t *testing.T) {
 	}
 	if containsJapaneseText("Agent Skills") {
 		t.Error("containsJapaneseText() rejected English text")
+	}
+}
+
+func TestSymlinkTargetIsCheckedWithoutFollowingIt(t *testing.T) {
+	link := t.TempDir() + "/linked-skill"
+	if err := os.Symlink("\u3042", link); err != nil {
+		t.Fatal(err)
+	}
+	target, err := os.Readlink(link)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !containsJapaneseText(target) {
+		t.Errorf("containsJapaneseText(%q) = false, want true", target)
 	}
 }
