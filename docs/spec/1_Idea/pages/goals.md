@@ -1,23 +1,26 @@
 ---
 title: Goals
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
-# Goal
+# Goals
 
-Skillは、実際に使うprojectの中で改善される。
+Skills improve inside the projects where people actually use them.
 
-改善がlocalだけに残ると、別のprojectでは再利用できない。一方、sourceだけを編集する運用では、使用中に得た知見を戻しにくい。
+When improvements remain local, other projects cannot reuse them. When people
+edit only the source, lessons learned during real use are harder to return.
 
-Localで使いながら改善し、sourceへ戻し、次のprojectが受け取れる循環を作る。
+Linked Skills creates a cycle: use and improve a skill locally, return the
+improvement to its source, and let the next project receive it.
 
-利用者は状態を確認し、sourceの変更を取り込み、localで改善し、必要ならsourceへ戻す。この循環を短い操作で続けられる状態を目指す。
+Users should be able to inspect state, bring in source changes, improve a local
+skill, and return that improvement through a short sequence of commands.
 
-実現したい状態:
+The intended outcomes are:
 
-- projectごとにskillを使いながら改善できる
-- localとsourceの状態を同期前に確認できる
-- 変更が衝突したときは、内容を見て人が解決できる
-- 書き込み可能なsourceへ改善を戻せる
-- read-only sourceも安全に利用できる
+- improve a skill while using it in each project
+- inspect local and source state before synchronization
+- let a person resolve conflicts after seeing the competing content
+- return improvements to a writable source
+- consume read-only sources safely

@@ -1,25 +1,26 @@
 ---
 title: Product values
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Values
 
-利便性と安全性が競合したときは、次の基準で判断する。
+Use these criteria when convenience and safety conflict.
 
-## Skillは使用中に育つ
+## Skills grow through use
 
-実際のprojectで使い、足りない点をその場で直せることを優先する。
+Prioritize using a skill in a real project and fixing gaps where they appear.
 
-## 変更を先に見えるようにする
+## Make changes visible first
 
-同期の前に、localとsourceのどちらが変わったかを確認できるようにする。
+Before synchronization, show whether the local copy, source, or both changed.
 
-## 曖昧な判断は人に残す
+## Leave ambiguous decisions to people
 
-競合、上書き、履歴変更を推測で進めない。判断に必要な差分を見える形で残す。
+Do not guess through conflicts, overwrites, or history changes. Preserve the
+differences a person needs to make the decision.
 
-## 人とagentが同じ流れを使う
+## Give people and agents the same workflow
 
-専用概念を増やさず、短い共通workflowで運用する。
+Avoid unnecessary product-specific concepts. Use one short, shared workflow.

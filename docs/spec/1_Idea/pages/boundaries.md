@@ -1,18 +1,19 @@
 ---
 title: Product boundaries
-updated: 2026-07-13
+updated: 2026-07-15
 status: implemented
 ---
 
 # Boundaries
 
-Project内のlocal skillと、GitHub repository内のsourceの同期を扱う。管理単位はprojectだけとする。
+Linked Skills synchronizes a local skill inside a project with a source inside
+a GitHub repository. The project is the only management scope.
 
-扱わないこと:
+The product does not provide:
 
-- 汎用Git clientやpackage registry
-- user全体やsystem全体のskill管理
-- 全projectへの一括配布
-- 競合の自動判断
-- GitHub権限の管理や昇格
-- 強制的な履歴変更
+- a general-purpose Git client or package registry
+- user-wide or system-wide skill management
+- bulk distribution to every project
+- automatic conflict decisions
+- GitHub permission management or elevation
+- forced history rewriting
