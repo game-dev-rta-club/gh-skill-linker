@@ -32,6 +32,9 @@ rubber-duck-caller   .agents/skills/rubber-duck-caller   clean  ineligible (fixe
 rubber-duck-partner  .agents/skills/rubber-duck-partner  clean  ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
 ```
 
+This is expected for a tag-backed install: the files are clean, while pull and
+push are disabled to preserve the fixed snapshot.
+
 Commit the installed files and their source record together:
 
 ```sh
