@@ -1,19 +1,18 @@
 ---
 title: Status reference
-updated: 2026-07-15
+updated: 2026-07-16
 status: implemented
 ---
 
 # Status
 
-Calculate state from local, source, and manifest tree identity, then determine
-pull and direct-push eligibility. Report proposal state separately.
+List visible Agent Skills, then calculate synchronization and operation
+eligibility for the subset managed by Skill Linker.
 
 ## STAT-001 Managed inventory and states
 
-Inspect only manifest `skills`. Base is manifest `treeSHA`, current is the skill
-tree SHA at the source ref, and local is the Git tree SHA calculated from the
-destination.
+For managed skills, base is manifest `treeSHA`, current is the skill tree SHA at
+the source ref, and local is the Git tree SHA calculated from the destination.
 
 Within one status call, batch all refs and push permissions. Read each
 project-wide Git inventory once. There is no persistent cache. Local evaluation
@@ -65,3 +64,27 @@ an earlier non-eligible reason.
 
 `eligible` means only that service preconditions pass. It does not include the
 final result of GitHub branch protection or rulesets.
+
+## STAT-004 Visible skill inventory
+
+Run `gh skill list --agent codex --json` to list valid project and user skill
+directories. Classify a row with source metadata as `gh-skill`, a `.system/`
+row as `codex-system`, and any other direct row as `local`.
+
+Run `codex plugin list --json` when Codex is available. Read only installed and
+enabled plugin source paths, then read their current `plugin.json` and declared
+skills directory. Do not scan caches or the historical gh skill lock file.
+Codex absence is allowed. Other collector failures produce warnings.
+
+These providers report only `present` or `enabled`. Do not query remote update
+availability.
+
+## STAT-005 Path identity and merge
+
+Use normalized absolute paths as identity. Render project paths relatively and
+include both `path` and exact `absolutePath` in JSON. A direct `local` row confirms a managed path and is
+deduplicated. Different non-local provider claims for one path produce
+`provider-conflict` and a warning.
+
+Managed rows retain existing JSON fields and operation eligibility. External
+rows leave proposal, pull, and push values unavailable.

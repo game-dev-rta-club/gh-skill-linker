@@ -3,6 +3,7 @@ package cli
 import (
 	"bytes"
 	"context"
+	"encoding/json"
 	"errors"
 	"strings"
 	"testing"
@@ -13,6 +14,7 @@ import (
 	publishapp "github.com/game-dev-rta-club/gh-skill-linker/internal/publish"
 	pullapp "github.com/game-dev-rta-club/gh-skill-linker/internal/pull"
 	pushapp "github.com/game-dev-rta-club/gh-skill-linker/internal/push"
+	"github.com/game-dev-rta-club/gh-skill-linker/internal/skillinventory"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/source"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/status"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/syncstate"
@@ -36,6 +38,18 @@ type fakeStatus struct {
 	records []status.Record
 	err     error
 	calls   int
+}
+
+type fakeSkillInventory struct {
+	result skillinventory.Result
+	root   string
+	calls  int
+}
+
+func (f *fakeSkillInventory) Inspect(_ context.Context, root string) skillinventory.Result {
+	f.calls++
+	f.root = root
+	return f.result
 }
 
 type fakePull struct {
@@ -191,6 +205,22 @@ func TestRunHelp(t *testing.T) {
 	}
 }
 
+func TestRunStatusHelpDescribesSkillProviders(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+
+	exitCode := Run(context.Background(), []string{"status", "--help"}, &stdout, &stderr)
+
+	if exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%q", exitCode, stderr.String())
+	}
+	for _, want := range []string{"skill-linker", "gh-skill", "codex-plugin", "local", "codex-system", "project, user, and system"} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+}
+
 func TestRunCommandHelp(t *testing.T) {
 	tests := []struct {
 		name string
@@ -272,7 +302,7 @@ func TestRunRejectsUnknownCommandAsUsageError(t *testing.T) {
 	}
 }
 
-func TestRunStatusJSONIncludesNullFields(t *testing.T) {
+func TestRunStatusJSONPreservesManagedFieldsAndAddsInventoryFields(t *testing.T) {
 	var stdout bytes.Buffer
 	var stderr bytes.Buffer
 	service := &fakeStatus{records: []status.Record{{
@@ -287,6 +317,11 @@ func TestRunStatusJSONIncludesNullFields(t *testing.T) {
 		Preflight: fakePreflight{},
 		Root:      fakeRoot{root: "/repo"},
 		Status:    service,
+		SkillInventory: &fakeSkillInventory{result: skillinventory.Result{Entries: []skillinventory.Entry{{
+			SkillName: "notes", AbsolutePath: "/repo/.agents/skills/notes",
+			Scope: skillinventory.ScopeProject, Provider: skillinventory.ProviderLocal,
+			Status: "present",
+		}}}},
 	}
 
 	exitCode := RunWithDependencies(context.Background(), []string{"status", "--json"}, &stdout, &stderr, dependencies)
@@ -294,9 +329,78 @@ func TestRunStatusJSONIncludesNullFields(t *testing.T) {
 	if exitCode != 0 {
 		t.Fatalf("Run() exit code = %d, want 0; stderr = %q", exitCode, stderr.String())
 	}
-	want := `[{"skillName":"local","path":".agents/skills/local","sourceURL":null,"sourceRef":null,"state":null,"pullEligibility":"ineligible","pullReason":"missing_source_metadata","pushEligibility":"ineligible","pushReason":"missing_source_metadata"}]` + "\n"
-	if stdout.String() != want {
-		t.Fatalf("stdout = %q, want %q", stdout.String(), want)
+	var rows []map[string]any
+	if err := json.Unmarshal(stdout.Bytes(), &rows); err != nil {
+		t.Fatalf("decode JSON: %v; output=%q", err, stdout.String())
+	}
+	if len(rows) != 2 {
+		t.Fatalf("rows = %#v, want 2", rows)
+	}
+	managed := rows[0]
+	if managed["provider"] != "skill-linker" || managed["scope"] != "project" || managed["sourceURL"] != nil {
+		t.Fatalf("managed row = %#v", managed)
+	}
+	if managed["path"] != ".agents/skills/local" || managed["absolutePath"] != "/repo/.agents/skills/local" {
+		t.Fatalf("managed paths = %#v", managed)
+	}
+	if managed["pullEligibility"] != "ineligible" || managed["pullReason"] != "missing_source_metadata" {
+		t.Fatalf("managed compatibility fields = %#v", managed)
+	}
+	local := rows[1]
+	if local["provider"] != "local" || local["status"] != "present" || local["path"] != ".agents/skills/notes" || local["absolutePath"] != "/repo/.agents/skills/notes" {
+		t.Fatalf("local row = %#v", local)
+	}
+}
+
+func TestRunStatusTableShowsProviderScopeAndExternalSkills(t *testing.T) {
+	var stdout bytes.Buffer
+	var stderr bytes.Buffer
+	state := syncstate.Clean
+	inventory := &fakeSkillInventory{result: skillinventory.Result{
+		Entries: []skillinventory.Entry{{
+			SkillName: "figma:figma-use", AbsolutePath: "/home/test/.codex/plugins/figma/skills/figma-use",
+			Scope: skillinventory.ScopeUser, Provider: skillinventory.ProviderCodexPlugin,
+			Source: "figma@openai-curated (1.0.0)", Status: "enabled",
+		}},
+		Warnings: []string{"external inventory is partial"},
+	}}
+	service := &fakeStatus{records: []status.Record{{
+		SkillName: "sample", Path: ".agents/skills/sample", State: &state,
+		SourceURL:       testStringPointer("https://github.com/example/skills.git"),
+		SourceRef:       testStringPointer("refs/heads/main"),
+		PullEligibility: status.Eligible, PushEligibility: status.Eligible,
+	}}}
+
+	exitCode := RunWithDependencies(context.Background(), []string{"status"}, &stdout, &stderr, Dependencies{
+		Preflight: fakePreflight{}, Root: fakeRoot{root: "/repo"}, Status: service,
+		SkillInventory: inventory,
+	})
+
+	if exitCode != 0 {
+		t.Fatalf("exit=%d stderr=%q", exitCode, stderr.String())
+	}
+	for _, want := range []string{
+		"SCOPE", "PROVIDER", "SOURCE", "STATUS", "skill-linker", "example/skills@main",
+		"figma:figma-use", "codex-plugin", "enabled", "PROPOSAL", "PULL", "PUSH",
+	} {
+		if !strings.Contains(stdout.String(), want) {
+			t.Errorf("stdout = %q, want %q", stdout.String(), want)
+		}
+	}
+	if !strings.Contains(stderr.String(), "warning: external inventory is partial") {
+		t.Fatalf("stderr = %q", stderr.String())
+	}
+	if inventory.calls != 1 || inventory.root != "/repo" {
+		t.Fatalf("inventory calls=%d root=%q", inventory.calls, inventory.root)
+	}
+}
+
+func TestSanitizeStatusTextReplacesTerminalControlCharacters(t *testing.T) {
+	input := "plugin\nname\tsource\x1b[31m"
+	want := "plugin name source [31m"
+
+	if got := sanitizeStatusText(input); got != want {
+		t.Fatalf("sanitizeStatusText() = %q, want %q", got, want)
 	}
 }
 

@@ -1,14 +1,14 @@
 ---
 title: Checking synchronization health
-updated: 2026-07-15
+updated: 2026-07-16
 status: implemented
 ---
 
 # Status
 
-`STATE` shows file synchronization. `PROPOSAL` shows the separate pull request
-state. `PULL` and `PUSH` show whether direct operations are available. Only
-skills registered in the manifest are shown.
+Status lists Agent Skills visible from project, user, and system scopes.
+`PROVIDER` identifies how each skill is supplied. `STATUS` shows synchronization
+for managed skills and presence or enablement for other providers.
 
 ```bash
 gh skill-linker status
@@ -17,19 +17,38 @@ gh skill-linker status
 Example:
 
 ```text
-SKILL          PATH                                STATE     PROPOSAL    PULL                              PUSH
-shared-rules   .agents/skills/shared-rules         clean     -           eligible                          eligible
-review-helper  .agents/skills/review-helper        pull      #18 waiting eligible                          ineligible (remote_changed)
-local-notes    .agents/skills/local-notes          push      #24 update  eligible                          ineligible (open_proposal)
-idea-refine    .agents/skills/idea-refine          conflict  -           ineligible (unresolved_conflict)  ineligible (unresolved_conflict)
+SKILL          SCOPE    PROVIDER      SOURCE                   STATUS   PROPOSAL    PULL                              PUSH
+shared-rules   project  skill-linker  owner/skills@main        clean    -           eligible                          eligible
+review-helper  project  skill-linker  owner/skills@main        pull     #18 waiting eligible                          ineligible (remote_changed)
+repo-health    project  gh-skill      owner/community@v1.2.0   present  -           -                                 -
+local-notes    project  local         -                        present  -           -                                 -
+figma:figma-use user    codex-plugin  figma@marketplace (2.0)  enabled  -           -                                 -
+imagegen       system   codex-system  Codex                    present  -           -                                 -
 ```
 
-- `STATE`: direction of differences between local and source
+- `SCOPE`: `project`, `user`, or `system`
+- `PROVIDER`: source classification
+- `SOURCE`: linked repository, GitHub metadata, plugin id, or Codex
+- `STATUS`: synchronization, presence, or enablement
 - `PROPOSAL`: managed pull request number and state
-- `PULL` / `PUSH`: whether the command can run
+- `PULL` / `PUSH`: whether a managed operation can run; `-` otherwise
 - parenthesized value: reason an operation cannot run
 
-| State | Meaning | Action |
+Provider values:
+
+| Provider | Evidence |
+| --- | --- |
+| `skill-linker` | Exact path exists in `.gh-skill-linker.json` |
+| `gh-skill` | `gh skill list` reports GitHub source metadata |
+| `codex-plugin` | An installed and enabled Codex plugin declares the skill |
+| `local` | A project or user skill directory has no external provider metadata |
+| `codex-system` | Codex supplies the system skill |
+
+The normal table omits physical paths to stay readable. JSON includes the
+display `path` and exact `absolutePath` for every row. Provider conflicts and partial inventory reads produce
+warnings. Status does not check non-linker providers for updates.
+
+| Status | Meaning | Action |
 | --- | --- | --- |
 | `clean` | No difference | None |
 | `pull` | Source changed | Pull |
@@ -74,7 +93,9 @@ even if file content is identical.
 `eligible` confirms preconditions only; it does not guarantee GitHub will
 accept a push.
 
-JSON output: `gh skill-linker status --json`
+JSON output: `gh skill-linker status --json`. Existing managed fields and
+project-relative `path` remain unchanged. `absolutePath`, provider, scope,
+source, status, and external rows are additive.
 
 See [Resolving conflicts](resolve-conflicts.md) for marker editing.
 

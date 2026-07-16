@@ -27,13 +27,17 @@ The install prints the destination of each skill. A successful status check
 looks like this:
 
 ```text
-SKILL                PATH                                STATE  PROPOSAL  PULL                           PUSH
-rubber-duck-caller   .agents/skills/rubber-duck-caller   clean  -         ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
-rubber-duck-partner  .agents/skills/rubber-duck-partner  clean  -         ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
+SKILL                 SCOPE    PROVIDER      SOURCE                               STATUS  PROPOSAL  PULL                           PUSH
+rubber-duck-caller    project  skill-linker  game-dev-rta-club/agent-skills@v1.0.0  clean   -         ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
+rubber-duck-partner   project  skill-linker  game-dev-rta-club/agent-skills@v1.0.0  clean   -         ineligible (fixed_source_ref)  ineligible (source_ref_read_only)
 ```
 
 This is expected for a tag-backed install: the files are clean, while pull and
 push are disabled to preserve the fixed snapshot.
+
+Status also lists local project skills, skills with `gh skill` metadata,
+enabled Codex plugin skills, and Codex system skills. It does not check those
+external providers for updates.
 
 Commit the installed files and their source record together:
 

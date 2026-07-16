@@ -1,6 +1,6 @@
 ---
 title: CLI runtime specification
-updated: 2026-07-15
+updated: 2026-07-16
 status: implemented
 ---
 
@@ -48,8 +48,12 @@ over a missing token.
 
 ## CLI-004 Status rendering
 
-Sort by path and render a table or JSON. JSON disables HTML escaping. The status
-service calculates file state, proposal state, and reason values.
+Merge managed status and provider inventory by normalized path, then sort by
+display path. The table shows provider status and managed operation details;
+JSON also includes exact paths and preserves existing managed fields. JSON
+disables HTML escaping. Inventory warnings use stderr without invalidating JSON.
+Replace terminal control characters in table cells and warnings with spaces;
+JSON encoding escapes them instead.
 
 ## CLI-005 Mutation rendering
 

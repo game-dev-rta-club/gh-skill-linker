@@ -1,6 +1,6 @@
 ---
 title: Skill Linker implementation coverage
-updated: 2026-07-15
+updated: 2026-07-16
 status: implemented
 ---
 
@@ -36,6 +36,8 @@ does not report line coverage.
 | STAT-001 | `status`, `syncstate` | state tests |
 | STAT-002 | `status/service.go` | reason/frontmatter tests |
 | STAT-003 | `status/service.go` | eligibility precedence tests |
+| STAT-004 | `skillinventory/service.go` | provider collector tests |
+| STAT-005 | `skillinventory/merge.go`, `cli` | path merge/render tests |
 | PULL-001 | `pull/service.go` | gate/name tests |
 | PULL-002 | `pull/service.go` | no-op tests |
 | PULL-003 | `pull`, `workspace` | rollback/conflict path tests |
