@@ -43,3 +43,10 @@ func TestParseNameCountsDescriptionCharactersInsteadOfBytes(t *testing.T) {
 		t.Fatalf("ParseName() = %q, %v, want sample", name, err)
 	}
 }
+
+func TestParseDeclaredNameAcceptsPluginDisplayCase(t *testing.T) {
+	name, err := ParseDeclaredName([]byte("---\nname: Presentations\ndescription: Slides.\n---\nBody\n"))
+	if err != nil || name != "Presentations" {
+		t.Fatalf("ParseDeclaredName() = %q, %v", name, err)
+	}
+}

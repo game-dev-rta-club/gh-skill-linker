@@ -36,6 +36,27 @@ func ParseName(content []byte) (string, error) {
 	return header.Name, nil
 }
 
+// ParseDeclaredName reads a skill name without enforcing the stricter
+// repository-install naming policy. Codex plugin bundles may use display-case
+// names while remaining valid runtime skills.
+func ParseDeclaredName(content []byte) (string, error) {
+	frontmatter, err := splitFrontmatter(content)
+	if err != nil {
+		return "", err
+	}
+	var header struct {
+		Name string `yaml:"name"`
+	}
+	if err := yaml.Unmarshal(frontmatter, &header); err != nil {
+		return "", fmt.Errorf("%w: parse YAML frontmatter: %v", ErrInvalidDocument, err)
+	}
+	name := strings.TrimSpace(header.Name)
+	if name == "" || utf8.RuneCountInString(name) > 256 {
+		return "", fmt.Errorf("%w: invalid declared skill name", ErrInvalidDocument)
+	}
+	return name, nil
+}
+
 func splitFrontmatter(content []byte) ([]byte, error) {
 	if !bytes.HasPrefix(content, []byte("---\n")) && !bytes.HasPrefix(content, []byte("---\r\n")) {
 		return nil, fmt.Errorf("%w: missing opening frontmatter delimiter", ErrInvalidDocument)

@@ -7,8 +7,10 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"sort"
 	"strings"
 	"text/tabwriter"
+	"unicode"
 
 	"github.com/cli/go-gh/v2/pkg/auth"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/command"
@@ -22,6 +24,7 @@ import (
 	publishapp "github.com/game-dev-rta-club/gh-skill-linker/internal/publish"
 	pullapp "github.com/game-dev-rta-club/gh-skill-linker/internal/pull"
 	pushapp "github.com/game-dev-rta-club/gh-skill-linker/internal/push"
+	"github.com/game-dev-rta-club/gh-skill-linker/internal/skillinventory"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/source"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/status"
 	"github.com/game-dev-rta-club/gh-skill-linker/internal/syncstate"
@@ -41,6 +44,10 @@ type ProjectRoot interface {
 
 type StatusService interface {
 	Inspect(ctx context.Context, projectRoot string) ([]status.Record, error)
+}
+
+type SkillInventory interface {
+	Inspect(ctx context.Context, projectRoot string) skillinventory.Result
 }
 
 type PullService interface {
@@ -88,6 +95,7 @@ type Dependencies struct {
 	Preflight        StatusPreflight
 	Root             ProjectRoot
 	Status           StatusService
+	SkillInventory   SkillInventory
 	Pull             PullService
 	Push             PushService
 	Uninstall        UninstallService
@@ -158,6 +166,7 @@ func defaultDependencies(args []string) (Dependencies, error) {
 		return Dependencies{}, err
 	}
 	dependencies.Preflight = compat.NewChecker(ghRunner)
+	dependencies.SkillInventory = skillinventory.NewService(ghRunner, command.New("codex"))
 	dependencies.Status = status.NewService(
 		manifest.Store{},
 		workspace.Reader{},
@@ -742,16 +751,26 @@ func runStatus(
 		_, _ = fmt.Fprintln(stderr, err)
 		return 1
 	}
+	discovered := skillinventory.Result{}
+	if dependencies.SkillInventory != nil {
+		discovered = dependencies.SkillInventory.Inspect(ctx, root)
+	}
+	merged := skillinventory.Merge(root, records, discovered.Entries)
+	merged.Warnings = append(merged.Warnings, discovered.Warnings...)
+	sort.Strings(merged.Warnings)
 	if jsonOutput {
 		encoder := json.NewEncoder(stdout)
 		encoder.SetEscapeHTML(false)
-		if err := encoder.Encode(records); err != nil {
+		if err := encoder.Encode(statusJSONEntries(merged.Entries)); err != nil {
 			_, _ = fmt.Fprintf(stderr, "write status JSON: %v\n", err)
 			return 1
 		}
-	} else if err := writeStatusTable(stdout, records); err != nil {
+	} else if err := writeStatusTable(stdout, merged.Entries); err != nil {
 		_, _ = fmt.Fprintf(stderr, "write status table: %v\n", err)
 		return 1
+	}
+	for _, warning := range merged.Warnings {
+		_, _ = fmt.Fprintf(stderr, "warning: %s\n", sanitizeStatusText(warning))
 	}
 	for _, record := range records {
 		if hasLocalChanges(record.State) && record.PushEligibility != status.Eligible &&
@@ -759,39 +778,99 @@ func runStatus(
 			_, _ = fmt.Fprintf(
 				stderr,
 				"warning: %s has local changes but push is %s (%s); changes remain only in this project\n",
-				record.Path,
+				sanitizeStatusText(record.Path),
 				record.PushEligibility,
-				pointerValue(record.PushReason),
+				sanitizeStatusText(pointerValue(record.PushReason)),
 			)
 		}
 	}
 	return 0
 }
 
-func writeStatusTable(writer io.Writer, records []status.Record) error {
+func writeStatusTable(writer io.Writer, entries []skillinventory.Entry) error {
 	table := tabwriter.NewWriter(writer, 0, 4, 2, ' ', 0)
-	if _, err := fmt.Fprintln(table, "SKILL\tPATH\tSTATE\tPROPOSAL\tPULL\tPUSH"); err != nil {
+	if _, err := fmt.Fprintln(table, "SKILL\tSCOPE\tPROVIDER\tSOURCE\tSTATUS\tPROPOSAL\tPULL\tPUSH"); err != nil {
 		return err
 	}
-	for _, record := range records {
-		state := "-"
-		if record.State != nil {
-			state = string(*record.State)
+	for _, entry := range entries {
+		proposalValue := "-"
+		pull := "-"
+		push := "-"
+		if entry.Managed != nil {
+			proposalValue = formatProposal(entry.Managed.Proposal)
+			pull = formatEligibility(entry.Managed.PullEligibility, entry.Managed.PullReason)
+			push = formatEligibility(entry.Managed.PushEligibility, entry.Managed.PushReason)
+		}
+		source := entry.Source
+		if source == "" {
+			source = "-"
 		}
 		if _, err := fmt.Fprintf(
 			table,
-			"%s\t%s\t%s\t%s\t%s\t%s\n",
-			record.SkillName,
-			record.Path,
-			state,
-			formatProposal(record.Proposal),
-			formatEligibility(record.PullEligibility, record.PullReason),
-			formatEligibility(record.PushEligibility, record.PushReason),
+			"%s\t%s\t%s\t%s\t%s\t%s\t%s\t%s\n",
+			sanitizeStatusText(entry.SkillName),
+			sanitizeStatusText(string(entry.Scope)),
+			sanitizeStatusText(string(entry.Provider)),
+			sanitizeStatusText(source),
+			sanitizeStatusText(entry.Status),
+			sanitizeStatusText(proposalValue),
+			sanitizeStatusText(pull),
+			sanitizeStatusText(push),
 		); err != nil {
 			return err
 		}
 	}
 	return table.Flush()
+}
+
+func sanitizeStatusText(value string) string {
+	return strings.Map(func(character rune) rune {
+		if unicode.IsControl(character) {
+			return ' '
+		}
+		return character
+	}, value)
+}
+
+type statusJSONEntry struct {
+	SkillName       string                  `json:"skillName"`
+	Path            string                  `json:"path"`
+	AbsolutePath    string                  `json:"absolutePath"`
+	Scope           skillinventory.Scope    `json:"scope"`
+	Provider        skillinventory.Provider `json:"provider"`
+	Source          string                  `json:"source"`
+	Status          string                  `json:"status"`
+	SourceURL       *string                 `json:"sourceURL"`
+	SourceRef       *string                 `json:"sourceRef"`
+	State           *syncstate.State        `json:"state"`
+	PullEligibility *status.Eligibility     `json:"pullEligibility,omitempty"`
+	PullReason      *string                 `json:"pullReason"`
+	PushEligibility *status.Eligibility     `json:"pushEligibility,omitempty"`
+	PushReason      *string                 `json:"pushReason"`
+	Proposal        *proposal.Summary       `json:"proposal,omitempty"`
+}
+
+func statusJSONEntries(entries []skillinventory.Entry) []statusJSONEntry {
+	result := make([]statusJSONEntry, 0, len(entries))
+	for _, entry := range entries {
+		output := statusJSONEntry{
+			SkillName: entry.SkillName, Path: entry.Path, AbsolutePath: entry.AbsolutePath, Scope: entry.Scope,
+			Provider: entry.Provider, Source: entry.Source, Status: entry.Status,
+		}
+		if entry.Managed != nil {
+			record := entry.Managed
+			output.SourceURL = record.SourceURL
+			output.SourceRef = record.SourceRef
+			output.State = record.State
+			output.PullEligibility = &record.PullEligibility
+			output.PullReason = record.PullReason
+			output.PushEligibility = &record.PushEligibility
+			output.PushReason = record.PushReason
+			output.Proposal = record.Proposal
+		}
+		result = append(result, output)
+	}
+	return result
 }
 
 func formatProposal(summary *proposal.Summary) string {

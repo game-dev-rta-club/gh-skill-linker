@@ -99,7 +99,12 @@ git commit -m "chore: install agent skills"
 gh skill-linker status
 ```
 
-`STATE` describes the direction of the difference:
+`PROVIDER` identifies how each visible skill is supplied: `skill-linker`,
+`gh-skill`, `codex-plugin`, `local`, or `codex-system`. `SCOPE` reports
+`project`, `user`, or `system`. Use `status --json` when the exact installed
+path is needed.
+
+For `skill-linker` rows, `STATUS` describes the direction of the difference:
 
 | State | Meaning | Typical next step |
 | --- | --- | --- |
@@ -108,9 +113,9 @@ gh skill-linker status
 | `push` | The local skill changed | Review, then `push` |
 | `conflict` | Both sides changed or markers remain | Resolve the conflict |
 
-`PROPOSAL` reports a managed pull request independently from file state. `PULL`
-and `PUSH` show whether each direct operation is eligible and, when it is not,
-the reason.
+Other providers report `present` or `enabled`; the extension does not check
+them for updates. `PROPOSAL` reports a managed pull request independently from
+file state. `PULL` and `PUSH` apply only to `skill-linker` rows.
 
 ## Collaborate on a branch
 

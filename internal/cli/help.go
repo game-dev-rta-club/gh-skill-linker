@@ -14,7 +14,7 @@ USAGE
 AVAILABLE COMMANDS
   install   Discover and install managed skills from a repository
   publish   Publish or propose an unmanaged local skill to a repository
-  status    Show project skill synchronization state
+  status    Show visible skills and managed synchronization state
   pull      Pull one managed skill from its source branch
   push      Push one managed skill directly or propose it with a pull request
   uninstall Remove one managed skill from the current project
@@ -146,13 +146,15 @@ LEARN MORE
   Run gh skill-linker status after installation.
 `
 
-const statusHelp = `Show synchronization and operation eligibility for project Agent Skills.
+const statusHelp = `Show Agent Skills visible from project, user, and system scopes.
 
-When synchronization state can be calculated, the table reports clean, pull,
-push, or conflict. PROPOSAL independently reports a pull request as waiting,
-update, source_changed, obsolete, diverged, ambiguous, or unknown.
-Local changes that cannot be pushed are reported as warnings.
-Tag-backed skills report pull and push as ineligible.
+PROVIDER identifies skill-linker, gh-skill, codex-plugin, local, and
+codex-system skills. Managed skills retain synchronization, proposal, pull, and
+push status. Other skills report presence or plugin enablement without checking
+for updates. Exact paths remain available in --json output.
+
+An unavailable optional inventory is reported as a warning. Codex is not a
+required dependency when no plugin inventory is available.
 
 USAGE
   gh skill-linker status [--json]
