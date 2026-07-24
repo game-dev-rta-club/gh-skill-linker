@@ -4,21 +4,20 @@
 [![Release](https://img.shields.io/github/v/release/game-dev-rta-club/gh-skill-linker)](https://github.com/game-dev-rta-club/gh-skill-linker/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
-**Let every project make your Agent Skills better.**
+**Use Agent Skills locally. Return improvements to their GitHub source.**
 
-An Agent Skill often reveals its real gaps only while doing real work. But a
-fix made inside one project tends to stay there, while editing only the source
-misses lessons that emerge during use.
+Agent Skills reveal what they are missing inside real projects. Keeping the
+skill as ordinary project files lets your agent use it, your team review it,
+and either of you improve it when the instructions fall short.
 
-`gh-skill-linker` turns that dead-end copy into a visible feedback loop. It
-keeps a reviewable skill inside the local project, remembers its exact GitHub
-source and last synchronized revision, and lets improvements return so the next
-project can benefit from what the previous one learned.
+`gh-skill-linker` installs that local copy and records its exact GitHub source
+and last synchronized revision. Work with the skill in your project, then use
+`status`, `push`, or `push --pr` to return useful changes instead of leaving
+them behind in one project.
 
-Install the extension once, then use skills as ordinary project files. Choose a
-tag for a fixed snapshot or a branch to exchange improvements. Before anything
-moves, `status` shows which side changed; divergent work is surfaced rather
-than silently overwritten.
+Choose a tag for a fixed snapshot or a branch for two-way collaboration. If the
+local skill and its source both change, Skill Linker shows the difference
+instead of silently choosing which work to overwrite.
 
 ![A local project sends an improved SKILL file to its remote Git source and receives the shared version back.](assets/skill-linker-hero.png)
 
@@ -61,9 +60,9 @@ The extension does not commit the parent project for you.
 
 ## Design principle
 
-Skills grow through use. Their source is where improvements can be shared, but
-the local project is where missing context, awkward instructions, and useful
-refinements become visible.
+Skills grow through use. The local project is where missing context, awkward
+instructions, and useful refinements become visible. The GitHub source is
+where those improvements can be shared with the next project.
 
 Skill Linker keeps both sides useful instead of making you choose between them.
 The project contains the complete skill that people and agents can inspect,
@@ -71,7 +70,7 @@ edit, and commit. The GitHub source remains the place that collects those
 lessons for the next project:
 
 ```text
-GitHub source → local use → local improvement → GitHub source → next project
+use locally → improve locally → return to GitHub → reuse in another project
 ```
 
 That loop needs a trustworthy point of comparison. Skill Linker records the
